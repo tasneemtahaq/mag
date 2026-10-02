@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 export default function HomePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-neutral-50 px-6 text-center">
@@ -10,6 +12,7 @@ export default function HomePage() {
       <p className="mt-6 max-w-md text-neutral-600">
         Our new home for collecting art is being built.
       </p>
+      <Button className="mt-8">Setup test button</Button>
     </main>
   );
 }
