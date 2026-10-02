@@ -20,7 +20,7 @@ const swatches = [
 
 export default function DesignSystemPage() {
   return (
-    <main className="py-24">
+   <div className="py-24">
       <Container className="space-y-24">
         <SectionHeading
           as="h1"
@@ -77,6 +77,6 @@ export default function DesignSystemPage() {
           </div>
         </section>
       </Container>
-    </main>
+    </div>
   );
 }

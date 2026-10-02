@@ -2,7 +2,7 @@ import { Container } from "@/components/layout/container";
 
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen items-center">
+    <div className="flex min-h-[70vh] items-center">
       <Container size="narrow" className="py-24 text-center">
         <p className="mb-4 text-xs font-medium uppercase tracking-[0.3em] text-gold-deep">
           Est. in Pakistan
@@ -14,6 +14,6 @@ export default function HomePage() {
           Our new home for collecting art is being built.
         </p>
       </Container>
-    </main>
+    </div>
   );
 }
