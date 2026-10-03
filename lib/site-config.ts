@@ -5,6 +5,12 @@
 export const siteConfig = {
   name: "Mohammadi Art Gallery",
   tagline: "Original art, prints and heritage crafts from Pakistan.",
+    hero: {
+    eyebrow: "Online Gallery",
+    title: "Mohammadi Art Gallery",
+    description:
+      "A contemporary space for collecting original artwork, prints, calligraphy and more.",
+  },
   contact: {
     phone: "+92 3335154855",
     email: "mag@gmail.com",

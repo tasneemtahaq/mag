@@ -10,7 +10,7 @@ export function AboutPreview() {
   return (
     <section aria-label="About the gallery" className="py-24 sm:py-32">
       <Container className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
-        <ArtworkPlaceholder className="aspect-[4/5] w-full" />
+        <ArtworkPlaceholder className="aspect-4/5 w-full" />
         <div>
           <SectionHeading
             eyebrow="Our story"
