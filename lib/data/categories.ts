@@ -9,3 +9,14 @@ export type NavCategory = {
 export async function getFooterCategories(): Promise<NavCategory[]> {
   return [];
 }
+// TEMPORARY SAMPLE DATA, replaced by a database query in Phase 9.
+export async function getHomeCategories(): Promise<NavCategory[]> {
+  return [
+    { name: "Oil Paintings", slug: "oil-paintings" },
+    { name: "Prints", slug: "prints" },
+    { name: "Sketches", slug: "sketches" },
+    { name: "Calligraphy", slug: "calligraphy" },
+    { name: "Carpets", slug: "carpets" },
+    { name: "Fibre-Work", slug: "fibre-work" },
+  ];
+}
