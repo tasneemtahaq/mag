@@ -6,7 +6,7 @@ export function GalleryLoading({ className }: { className?: string }) {
       role="status"
       aria-live="polite"
       className={cn(
-        "flex h-full min-h-[calc(100svh-4rem)] flex-col items-center justify-center bg-linen px-6 text-center lg:min-h-[calc(100svh-5rem)]",
+        "flex h-full min-h-[calc(100svh-4rem)] flex-col items-center justify-center bg-ivory px-6 text-center lg:min-h-[calc(100svh-5rem)]",
         className,
       )}
     >

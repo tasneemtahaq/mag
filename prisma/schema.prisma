@@ -1,0 +1,501 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// Enums: fixed lists of allowed values
+// ============================================================
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ArtworkType {
+  ORIGINAL
+  PRINT
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum ShippingStatus {
+  NOT_SHIPPED
+  PREPARING
+  SHIPPED
+  DELIVERED
+  RETURNED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  HIDDEN
+}
+
+// ============================================================
+// People
+// ============================================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  phone         String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  addresses      Address[]
+  cart           Cart?
+  wishlist       Wishlist?
+  orders         Order[]
+  reviews        Review[]
+  discountUsages DiscountUsage[]
+
+  @@index([role])
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  label      String?
+  fullName   String
+  phone      String
+  line1      String
+  line2      String?
+  city       String
+  province   String
+  postalCode String?
+  country    String   @default("PK")
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================
+// Catalog: categories, sizes, products
+// ============================================================
+
+model Category {
+  id             String    @id @default(cuid())
+  name           String
+  slug           String    @unique
+  description    String?
+  imageUrl       String?
+  sortOrder      Int       @default(0)
+  isActive       Boolean   @default(true)
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  archivedAt     DateTime?
+
+  subcategories Subcategory[]
+  products      Product[]
+
+  @@index([isActive, sortOrder])
+}
+
+model Subcategory {
+  id          String   @id @default(cuid())
+  categoryId  String
+  name        String
+  slug        String
+  description String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@unique([categoryId, slug])
+  @@index([categoryId, isActive, sortOrder])
+}
+
+// Reusable size definitions the admin manages ("Small", "12 x 18 in", ...)
+model Size {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  widthCm   Decimal? @db.Decimal(8, 2)
+  heightCm  Decimal? @db.Decimal(8, 2)
+  depthCm   Decimal? @db.Decimal(8, 2)
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  variants ProductVariant[]
+}
+
+model Product {
+  id               String        @id @default(cuid())
+  name             String
+  slug             String        @unique
+  shortDescription String?
+  description      String?
+  categoryId       String
+  subcategoryId    String?
+  artist           String?
+  material         String?
+  medium           String?
+  tags             String[]      @default([])
+  yearCreated      Int?
+  artworkType      ArtworkType   @default(ORIGINAL)
+  editionNumber    Int?
+  totalEditions    Int?
+  hasCertificate   Boolean       @default(false)
+  isSigned         Boolean       @default(false)
+  provenance       String?
+  isFeatured       Boolean       @default(false)
+  status           ProductStatus @default(DRAFT)
+  seoTitle         String?
+  seoDescription   String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  deletedAt        DateTime?
+
+  category      Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  subcategory   Subcategory?     @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  variants      ProductVariant[]
+  images        ProductImage[]
+  reviews       Review[]
+  wishlistItems WishlistItem[]
+
+  @@index([categoryId, status])
+  @@index([subcategoryId])
+  @@index([status, isFeatured])
+  @@index([createdAt])
+}
+
+// What a customer actually buys: a size, frame, edition... with its own price and stock
+model ProductVariant {
+  id          String    @id @default(cuid())
+  productId   String
+  sizeId      String?
+  name        String
+  sku         String    @unique
+  price       Decimal   @db.Decimal(14, 2)
+  salePrice   Decimal?  @db.Decimal(14, 2)
+  stock       Int       @default(0)
+  widthCm     Decimal?  @db.Decimal(8, 2)
+  heightCm    Decimal?  @db.Decimal(8, 2)
+  depthCm     Decimal?  @db.Decimal(8, 2)
+  weightGrams Int?
+  // Room for future options such as {"frame": "Black", "finish": "Matte"}
+  options     Json?
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  product    Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size       Size?        @relation(fields: [sizeId], references: [id], onDelete: SetNull)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@unique([productId, name])
+  @@index([productId, isActive])
+  @@index([sizeId])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  // The id your image storage service gives the file (used to delete or replace it)
+  publicId  String?
+  alt       String?
+  width     Int?
+  height    Int?
+  sortOrder Int      @default(0)
+  isMain    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+}
+
+// ============================================================
+// Cart and wishlist
+// ============================================================
+
+model Cart {
+  id         String   @id @default(cuid())
+  // A logged-in customer's cart...
+  userId     String?  @unique
+  // ...or a guest's cart, identified by a random token kept in a cookie
+  guestToken String?  @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user  User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+}
+
+// Note: the price is NOT stored here. The server always looks it up again.
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  variantId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, variantId])
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items WishlistItem[]
+}
+
+model WishlistItem {
+  id         String   @id @default(cuid())
+  wishlistId String
+  productId  String
+  createdAt  DateTime @default(now())
+
+  wishlist Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([wishlistId, productId])
+}
+
+// ============================================================
+// Orders and payments
+// ============================================================
+
+model Order {
+  id            String         @id @default(cuid())
+  // A friendly sequential number. We show it as "MAG-1001" and so on.
+  number        Int            @unique @default(autoincrement())
+  // Empty for guest checkout, and kept even if the account is deleted
+  userId        String?
+  customerName  String
+  customerEmail String
+  customerPhone String
+
+  // A copy of the shipping address at the time of the order
+  shipName       String
+  shipPhone      String
+  shipLine1      String
+  shipLine2      String?
+  shipCity       String
+  shipProvince   String
+  shipPostalCode String?
+  shipCountry    String         @default("PK")
+
+  currency       String         @default("PKR")
+  subtotal       Decimal        @db.Decimal(14, 2)
+  shippingCost   Decimal        @default(0) @db.Decimal(14, 2)
+  discountTotal  Decimal        @default(0) @db.Decimal(14, 2)
+  total          Decimal        @db.Decimal(14, 2)
+  discountCode   String?
+
+  status         OrderStatus    @default(PENDING)
+  shippingStatus ShippingStatus @default(NOT_SHIPPED)
+  carrier        String?
+  trackingNumber String?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items         OrderItem[]
+  payments      Payment[]
+  discountUsage DiscountUsage?
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  variantId   String
+  // Snapshots, so later edits to the product never change past orders
+  productName String
+  variantName String
+  sku         String
+  imageUrl    String?
+  unitPrice   Decimal @db.Decimal(14, 2)
+  quantity    Int
+  lineTotal   Decimal @db.Decimal(14, 2)
+
+  order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([variantId])
+}
+
+// One order can have several payment attempts (for example after a failure)
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String
+  // "safepay", "cod", "bank_transfer"... plain text so new providers need no migration
+  provider          String
+  providerPaymentId String?
+  status            PaymentStatus @default(PENDING)
+  amount            Decimal       @db.Decimal(14, 2)
+  currency          String        @default("PKR")
+  failureReason     String?
+  // The provider's verified message, kept for auditing (never put secrets here)
+  rawResponse       Json?
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Stops the same webhook from being processed twice
+  @@unique([provider, providerPaymentId])
+  @@index([orderId])
+  @@index([status])
+}
+
+// ============================================================
+// Reviews, discounts, newsletter, settings
+// ============================================================
+
+model Review {
+  id        String       @id @default(cuid())
+  productId String
+  userId    String
+  rating    Int
+  title     String?
+  body      String?
+  status    ReviewStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // One review per customer per product
+  @@unique([productId, userId])
+  @@index([productId, status])
+}
+
+model Discount {
+  id             String       @id @default(cuid())
+  // Always stored in UPPERCASE
+  code           String       @unique
+  description    String?
+  type           DiscountType
+  value          Decimal      @db.Decimal(14, 2)
+  minOrderAmount Decimal?     @db.Decimal(14, 2)
+  maxUses        Int?
+  usedCount      Int          @default(0)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  usages DiscountUsage[]
+}
+
+model DiscountUsage {
+  id         String   @id @default(cuid())
+  discountId String
+  orderId    String   @unique
+  userId     String?
+  amount     Decimal  @db.Decimal(14, 2)
+  createdAt  DateTime @default(now())
+
+  discount Discount @relation(fields: [discountId], references: [id], onDelete: Restrict)
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([discountId])
+  @@index([userId])
+}
+
+model NewsletterSubscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  isActive       Boolean   @default(true)
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+}
+
+// Delivery pricing rules. A city rule beats a province rule, which beats the default.
+model ShippingRule {
+  id        String   @id @default(cuid())
+  name      String
+  province  String?
+  city      String?
+  rate      Decimal  @db.Decimal(14, 2)
+  freeAbove Decimal? @db.Decimal(14, 2)
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, province, city])
+}
+
+// A single row (id "site") holding store-wide settings
+model SiteSettings {
+  id                    String   @id @default("site")
+  storeName             String   @default("Mohammadi Art Gallery")
+  defaultCurrency       String   @default("PKR")
+  contactEmail          String?
+  contactPhone          String?
+  contactAddress        String?
+  flatShippingRate      Decimal  @default(0) @db.Decimal(14, 2)
+  freeShippingThreshold Decimal? @db.Decimal(14, 2)
+  updatedAt             DateTime @updatedAt
+}

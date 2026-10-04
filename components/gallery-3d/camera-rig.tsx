@@ -1,80 +1,93 @@
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
-import { CatmullRomCurve3, MathUtils, Vector3 } from "three";
+import { useRef } from "react";
+import { MathUtils, Vector3 } from "three";
+import type { PerspectiveCamera } from "three";
+import {
+  BACK_Z,
+  END_FOV,
+  HERO_FILL,
+  START_FOV,
+  buildCameraKeys,
+  sampleKeys,
+  smoothstep,
+} from "@/components/gallery-3d/gallery-layout";
+import type {
+  HeroSizeRef,
+  ProgressRef,
+} from "@/components/gallery-3d/gallery-layout";
 
-type ProgressRef = { current: number };
-type Vec3 = [number, number, number];
-
-// Where the camera is at 0%, 20%, 40%, 60%, 80% and 100% of the scroll.
-// Coordinates: x = right, y = up, z = towards the viewer.
-// The gallery runs away from us along the negative z direction.
-const CAMERA_POINTS: Vec3[] = [
-  [0, 1.8, 18], //   0%  outside, wide establishing shot
-  [0, 1.7, 3], //   20% at the entrance
-  [0, 1.7, -8], //  40% first artworks
-  [0, 1.7, -17], // 60% deeper into the exhibition
-  [0, 2.0, -23], // 80% the masterpiece comes into view
-  [0, 2.5, -27.2], // 100% the painting fills the screen
-];
-
-// What the camera is looking at, at the same moments
-const LOOK_POINTS: Vec3[] = [
-  [0, 2.4, -10],
-  [0, 2.4, -14],
-  [-5, 2.4, -13],
-  [4, 2.4, -22],
-  [0, 2.5, -30],
-  [0, 2.6, -30],
-];
-
-export function CameraRig({ progress }: { progress: ProgressRef }) {
-  const smooth = useRef(0);
-  const parallax = useRef({ x: 0, y: 0 });
+export function CameraRig({
+  smoothRef,
+  heroSizeRef,
+}: {
+  smoothRef: ProgressRef;
+  heroSizeRef: HeroSizeRef;
+}) {
+  // The path keys change every frame (the stopping distance depends on the
+  // screen shape), so they live in a ref
+  const keysRef = useRef(buildCameraKeys());
   const position = useRef(new Vector3());
-  const lookAt = useRef(new Vector3());
-
-  const curves = useMemo(
-    () => ({
-      position: new CatmullRomCurve3(
-        CAMERA_POINTS.map((p) => new Vector3(...p)),
-        false,
-        "centripetal",
-      ),
-      target: new CatmullRomCurve3(
-        LOOK_POINTS.map((p) => new Vector3(...p)),
-        false,
-        "centripetal",
-      ),
-    }),
-    [],
-  );
+  const look = useRef(new Vector3());
+  const parallax = useRef({ x: 0, y: 0 });
+  const lastT = useRef(0);
+  const walk = useRef(0); // 0 = standing still, 1 = walking
 
   useFrame((state, delta) => {
-    // Glide towards the scroll position instead of jumping to it
-    smooth.current = MathUtils.damp(smooth.current, progress.current, 4, delta);
-    const t = MathUtils.clamp(smooth.current, 0, 1);
+    const camera = state.camera as PerspectiveCamera;
+    const keys = keysRef.current;
+    const t = MathUtils.clamp(smoothRef.current, 0, 1);
 
-    curves.position.getPoint(t, position.current);
-    curves.target.getPoint(t, lookAt.current);
+    // How far from the masterpiece to stop so that it fills the screen
+    const tanHalf = Math.tan(MathUtils.degToRad(END_FOV / 2));
+    const { width, height } = heroSizeRef.current;
+    const distance = Math.min(
+      Math.max(
+        height / 2 / tanHalf,
+        width / 2 / (tanHalf * camera.aspect),
+      ) / HERO_FILL,
+      9,
+    );
+    const finalZ = BACK_Z + distance;
+    keys[keys.length - 1].position[2] = finalZ;
+    keys[keys.length - 2].position[2] = finalZ + 3.5;
+
+    sampleKeys(keys, t, "position", position.current);
+    sampleKeys(keys, t, "look", look.current);
+
+    // A gentle walking bob and sway, only while the visitor is moving
+    const speed = Math.abs(t - lastT.current) / Math.max(delta, 0.001);
+    lastT.current = t;
+    walk.current = MathUtils.damp(
+      walk.current,
+      MathUtils.clamp(speed * 12, 0, 1),
+      4,
+      delta,
+    );
+
+    // The final shot stays calm and steady
+    const calm = 1 - 0.85 * smoothstep(0.85, 1, t);
+    const time = state.clock.elapsedTime;
+    const bob = Math.sin(time * 7.5) * 0.014 * walk.current * calm;
+    const sway = Math.sin(time * 3.75) * 0.01 * walk.current * calm;
+    const breathe = Math.sin(time * 0.9) * 0.004 * calm;
 
     // Very subtle mouse parallax
-    parallax.current.x = MathUtils.damp(
-      parallax.current.x,
-      state.pointer.x,
-      3,
-      delta,
-    );
-    parallax.current.y = MathUtils.damp(
-      parallax.current.y,
-      state.pointer.y,
-      3,
-      delta,
-    );
-    position.current.x += parallax.current.x * 0.25;
-    position.current.y += parallax.current.y * 0.1;
+    parallax.current.x = MathUtils.damp(parallax.current.x, state.pointer.x, 3, delta);
+    parallax.current.y = MathUtils.damp(parallax.current.y, state.pointer.y, 3, delta);
 
-    state.camera.position.copy(position.current);
-    state.camera.lookAt(lookAt.current);
+    position.current.x += parallax.current.x * 0.25 * calm + sway;
+    position.current.y += parallax.current.y * 0.1 * calm + bob + breathe;
+
+    camera.position.copy(position.current);
+    camera.lookAt(look.current);
+    camera.rotateZ(-parallax.current.x * 0.012 * calm); // a tiny tilt
+
+    // Slow lens push-in during the final stretch
+    const fov = MathUtils.lerp(START_FOV, END_FOV, smoothstep(0.7, 1, t));
+    if (Math.abs(camera.fov - fov) > 0.01) {
+      camera.fov = fov;
+      camera.updateProjectionMatrix();
+    }
   });
 
   return null;

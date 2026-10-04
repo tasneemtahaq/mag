@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Original (large) artwork photos. The resized copies in public/gallery are committed.
+/gallery-source
+
+# Prisma's generated client. It is recreated by "npx prisma generate".
+/generated/prisma

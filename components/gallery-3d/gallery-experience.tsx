@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
+import { NeutralToneMapping } from "three";
 import { GalleryLoading } from "@/components/gallery-3d/gallery-loading";
+import { START_FOV } from "@/components/gallery-3d/gallery-layout";
 import { GalleryScene } from "@/components/gallery-3d/gallery-scene";
 import { buttonVariants } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site-config";
@@ -20,6 +22,7 @@ export default function GalleryExperience() {
 
   const [ready, setReady] = useState(false);
   const [onScreen, setOnScreen] = useState(true);
+  const handleReady = useCallback(() => setReady(true), []);
 
   // Turn the scroll position into a 0-to-1 progress value
   useEffect(() => {
@@ -34,11 +37,11 @@ export default function GalleryExperience() {
       const p = Math.min(Math.max(raw, 0), 1);
       progress.current = p;
 
-      // Intro text fades out during the first 12% of the journey
+      // The title fades out as the doors begin to open
       if (introRef.current) {
-        introRef.current.style.opacity = String(1 - Math.min(p / 0.12, 1));
+        introRef.current.style.opacity = String(1 - Math.min(p / 0.1, 1));
       }
-      // The closing call-to-action fades in during the last 10%
+      // The closing call-to-action fades in at the very end
       if (outroRef.current) {
         const o = Math.min(Math.max((p - 0.9) / 0.1, 0), 1);
         outroRef.current.style.opacity = String(o);
@@ -72,47 +75,53 @@ export default function GalleryExperience() {
       aria-label="Gallery tour"
       className="relative h-[500svh]"
     >
+      {/* The stage has a pastel sky; the 3D canvas is transparent on top of it */}
       <div
         ref={stageRef}
-        className="sticky top-16 h-[calc(100svh-4rem)] overflow-hidden bg-linen lg:top-20 lg:h-[calc(100svh-5rem)]"
+        className="sticky top-16 h-[calc(100svh-4rem)] overflow-hidden bg-linear-to-b from-[#bcd9ee] via-[#f4dde8] to-[#fbeee0] lg:top-20 lg:h-[calc(100svh-5rem)]"
       >
         {/* The 3D canvas */}
         <div
           role="img"
-          aria-label="An animated 3D tour through a white, contemporary art gallery"
+          aria-label="An animated 3D tour: a pastel graffiti wall, its doors opening onto a white contemporary art gallery"
           className="absolute inset-0"
         >
           <Canvas
             frameloop={onScreen ? "always" : "never"}
             dpr={[1, 1.5]}
-            camera={{ fov: 50, near: 0.1, far: 120, position: [0, 1.8, 18] }}
-            gl={{ antialias: true, powerPreference: "high-performance" }}
-            onCreated={() => setReady(true)}
+            camera={{ fov: START_FOV, near: 0.1, far: 150, position: [0, 1.7, 15] }}
+            gl={{
+              antialias: true,
+              alpha: true,
+              powerPreference: "high-performance",
+              // Keeps your artwork's colors true instead of washing them out
+              toneMapping: NeutralToneMapping,
+            }}
           >
-            <GalleryScene progress={progress} />
+            <GalleryScene progress={progress} onReady={handleReady} />
           </Canvas>
         </div>
 
-        {/* Intro text (fades out as the camera moves) */}
+        {/* Title over the graffiti wall (fades out as the doors open) */}
         <div
           ref={introRef}
-          className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center bg-[radial-gradient(ellipse_55%_45%_at_50%_28%,rgba(244,241,234,0.9),transparent_72%)] px-6 pt-[9vh] text-center"
+          className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center px-6 text-center"
         >
-          <p className="mb-5 text-xs font-medium uppercase tracking-[0.3em] text-gold-deep">
+          <p className="mb-5 text-xs font-medium uppercase tracking-[0.3em] text-ink/70">
             {siteConfig.hero.eyebrow}
           </p>
-          <h1 className="font-display text-5xl font-light leading-[1.05] lg:text-7xl">
+          <h1 className="font-display text-5xl font-light leading-[1.05] text-ink [text-shadow:0_2px_28px_rgba(255,255,255,0.85)] lg:text-7xl">
             {siteConfig.hero.title}
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink/80 [text-shadow:0_1px_16px_rgba(255,255,255,0.9)]">
             {siteConfig.hero.description}
           </p>
           <div
             aria-hidden
-            className="absolute inset-x-0 bottom-8 flex flex-col items-center gap-3 text-[0.65rem] uppercase tracking-[0.3em] text-muted-foreground"
+            className="absolute inset-x-0 bottom-8 flex flex-col items-center gap-3 text-[0.65rem] uppercase tracking-[0.3em] text-ink/70"
           >
             <span>Scroll to enter</span>
-            <span className="h-12 w-px bg-gold" />
+            <span className="h-12 w-px bg-ink/50" />
           </div>
         </div>
 
@@ -127,7 +136,7 @@ export default function GalleryExperience() {
           </Link>
         </div>
 
-        {/* Loading screen, fades away once the 3D scene is ready */}
+        {/* Loading screen, fades away once everything is loaded */}
         <div
           className={cn(
             "absolute inset-0 z-30 transition-opacity duration-700",
