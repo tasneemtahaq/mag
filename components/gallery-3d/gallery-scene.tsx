@@ -1,5 +1,6 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { Suspense, useEffect, useRef } from "react";
+import type { RefObject } from "react";
 import { MathUtils, PMREMGenerator } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { Artworks } from "@/components/gallery-3d/artworks";
@@ -61,9 +62,11 @@ function SceneReady({ onReady }: { onReady: () => void }) {
 export function GalleryScene({
   progress,
   onReady,
+  titleRef,
 }: {
   progress: ProgressRef;
   onReady: () => void;
+  titleRef: RefObject<HTMLElement | null>;
 }) {
   const smoothRef = useRef(0);
   const heroSizeRef = useRef({ width: 6, height: 4 });
@@ -86,7 +89,11 @@ export function GalleryScene({
         <SceneReady onReady={onReady} />
       </Suspense>
 
-      <CameraRig smoothRef={smoothRef} heroSizeRef={heroSizeRef} />
+      <CameraRig
+        smoothRef={smoothRef}
+        heroSizeRef={heroSizeRef}
+        titleRef={titleRef}
+      />
     </>
   );
 }

@@ -1,10 +1,17 @@
 import Link from "next/link";
-import { ExternalLink, Frame, LayoutDashboard, Tags } from "lucide-react";
+import {
+  ExternalLink,
+  Frame,
+  LayoutDashboard,
+  Ruler,
+  Tags,
+} from "lucide-react";
 
 const items = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/categories", label: "Categories", icon: Tags },
   { href: "/admin/products", label: "Products", icon: Frame },
+  { href: "/admin/sizes", label: "Sizes", icon: Ruler },
 ] as const;
 
 const linkClass =

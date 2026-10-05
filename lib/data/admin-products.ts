@@ -28,11 +28,9 @@ export async function getAdminProduct(id: string) {
   return db.product.findFirst({
     where: { id, deletedAt: null },
     include: {
-      // For now the form edits the first (and only) variant
       variants: {
         where: { deletedAt: null },
-        orderBy: { sortOrder: "asc" },
-        take: 1,
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       },
       images: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
     },
@@ -54,4 +52,17 @@ export async function getProductFormOptions() {
       },
     },
   });
+}
+
+// Sizes for the variant form's dropdown
+export async function getSizeOptions() {
+  await requireAdmin();
+  const sizes = await db.size.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, isActive: true },
+  });
+  return sizes.map((size) => ({
+    id: size.id,
+    name: size.isActive ? size.name : `${size.name} (hidden)`,
+  }));
 }

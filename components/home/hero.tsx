@@ -22,13 +22,13 @@ export function Hero() {
         className="-z-10 object-cover"
       />
 
-      <Container size="narrow" className="py-24 text-center">
+            <Container className="py-24 text-center">
         <p className="mb-6 text-xs font-medium uppercase tracking-[0.3em] text-ink/70">
           {hero.eyebrow}
         </p>
         <h1
           id="hero-heading"
-          className="font-display text-5xl font-light leading-[1.05] [text-shadow:0_2px_28px_rgba(255,255,255,0.85)] sm:text-7xl lg:text-8xl"
+          className="whitespace-nowrap font-display text-[clamp(1.6rem,6vw,5.5rem)] font-bold leading-[1.05] tracking-tight [text-shadow:0_2px_24px_rgba(255,255,255,0.9)]"
         >
           {hero.title}
         </h1>

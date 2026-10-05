@@ -1,5 +1,6 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
+import type { RefObject } from "react";
 import { MathUtils, Vector3 } from "three";
 import type { PerspectiveCamera } from "three";
 import {
@@ -7,6 +8,7 @@ import {
   END_FOV,
   HERO_FILL,
   START_FOV,
+  TITLE_ANCHOR,
   buildCameraKeys,
   sampleKeys,
   smoothstep,
@@ -19,15 +21,18 @@ import type {
 export function CameraRig({
   smoothRef,
   heroSizeRef,
+  titleRef,
 }: {
   smoothRef: ProgressRef;
   heroSizeRef: HeroSizeRef;
+  titleRef: RefObject<HTMLElement | null>;
 }) {
   // The path keys change every frame (the stopping distance depends on the
   // screen shape), so they live in a ref
   const keysRef = useRef(buildCameraKeys());
   const position = useRef(new Vector3());
   const look = useRef(new Vector3());
+  const anchor = useRef(new Vector3());
   const parallax = useRef({ x: 0, y: 0 });
   const lastT = useRef(0);
   const walk = useRef(0); // 0 = standing still, 1 = walking
@@ -87,6 +92,15 @@ export function CameraRig({
     if (Math.abs(camera.fov - fov) > 0.01) {
       camera.fov = fov;
       camera.updateProjectionMatrix();
+    }
+
+    // Keep the title pinned to the wall above the door: work out where that
+    // spot in 3D space lands on the screen, and move the title there
+    const title = titleRef.current;
+    if (title) {
+      camera.updateMatrixWorld();
+      anchor.current.set(...TITLE_ANCHOR).project(camera);
+      title.style.top = `${((1 - anchor.current.y) / 2) * 100}%`;
     }
   });
 

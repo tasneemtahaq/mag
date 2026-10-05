@@ -17,6 +17,7 @@ export default function GalleryExperience() {
   const stageRef = useRef<HTMLDivElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
   const outroRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
   // Scroll progress, 0 to 1. A ref (not state), so scrolling never re-renders React.
   const progress = useRef(0);
 
@@ -98,24 +99,31 @@ export default function GalleryExperience() {
               toneMapping: NeutralToneMapping,
             }}
           >
-            <GalleryScene progress={progress} onReady={handleReady} />
+            <GalleryScene
+              progress={progress}
+              onReady={handleReady}
+              titleRef={titleRef}
+            />
           </Canvas>
         </div>
 
-        {/* Title over the graffiti wall (fades out as the doors open) */}
+                {/* Title above the door (fades out as the doors open) */}
         <div
           ref={introRef}
-          className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center px-6 text-center"
+          className="pointer-events-none absolute inset-0 z-10"
         >
-          <p className="mb-5 text-xs font-medium uppercase tracking-[0.3em] text-ink/70">
-            {siteConfig.hero.eyebrow}
-          </p>
-          <h1 className="font-display text-5xl font-light leading-[1.05] text-ink [text-shadow:0_2px_28px_rgba(255,255,255,0.85)] lg:text-7xl">
-            {siteConfig.hero.title}
-          </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink/80 [text-shadow:0_1px_16px_rgba(255,255,255,0.9)]">
-            {siteConfig.hero.description}
-          </p>
+          {/* This block is pinned to the wall above the door, in 3D space */}
+          <div
+            ref={titleRef}
+            className="absolute inset-x-0 top-[31%] -translate-y-1/2 px-6 text-center"
+          >
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-ink/80">
+              {siteConfig.hero.eyebrow}
+            </p>
+            <h1 className="whitespace-nowrap font-display text-[clamp(2.25rem,5vw,4.75rem)] font-bold leading-none tracking-tight text-ink [text-shadow:0_2px_24px_rgba(255,255,255,0.9)]">
+              {siteConfig.hero.title}
+            </h1>
+          </div>
           <div
             aria-hidden
             className="absolute inset-x-0 bottom-8 flex flex-col items-center gap-3 text-[0.65rem] uppercase tracking-[0.3em] text-ink/70"

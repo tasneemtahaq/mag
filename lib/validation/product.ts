@@ -1,9 +1,6 @@
 import { z } from "zod";
 import { slugify } from "@/lib/slugify";
 
-const MONEY = /^\d{1,12}(\.\d{1,2})?$/;
-const MONEY_MESSAGE = "Enter an amount like 85000 or 85000.50";
-
 const wholeNumber = (label: string, min: number, max: number) =>
   z
     .string()
@@ -13,14 +10,6 @@ const wholeNumber = (label: string, min: number, max: number) =>
         v === "" || (/^\d{1,9}$/.test(v) && Number(v) >= min && Number(v) <= max),
       `${label} must be a whole number from ${min} to ${max}`,
     );
-
-const dimension = z
-  .string()
-  .trim()
-  .refine(
-    (v) => v === "" || /^\d{1,4}(\.\d{1,2})?$/.test(v),
-    "Enter centimetres, like 60 or 60.5",
-  );
 
 export const productSchema = z
   .object({
@@ -55,37 +44,8 @@ export const productSchema = z
     provenance: z.string().trim().max(2000, "Keep it under 2000 characters"),
     isFeatured: z.boolean(),
     status: z.enum(["DRAFT", "ACTIVE", "ARCHIVED"]),
-    sku: z
-      .string()
-      .trim()
-      .min(3, "The SKU must be at least 3 characters")
-      .max(40, "The SKU must be 40 characters or fewer")
-      .regex(
-        /^[A-Za-z0-9][A-Za-z0-9._-]*$/,
-        "Use letters, numbers, dots, hyphens and underscores only",
-      ),
-    price: z.string().trim().regex(MONEY, MONEY_MESSAGE),
-    salePrice: z
-      .string()
-      .trim()
-      .refine((v) => v === "" || MONEY.test(v), MONEY_MESSAGE),
-    stock: z
-      .string()
-      .trim()
-      .regex(/^\d{1,6}$/, "Enter a whole number, 0 or more"),
-    widthCm: dimension,
-    heightCm: dimension,
-    depthCm: dimension,
-    weightGrams: wholeNumber("Weight", 1, 1000000),
   })
   .superRefine((value, ctx) => {
-    if (value.salePrice !== "" && Number(value.salePrice) >= Number(value.price)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["salePrice"],
-        message: "The sale price must be lower than the price",
-      });
-    }
     if (
       value.editionNumber !== "" &&
       value.totalEditions !== "" &&
@@ -102,7 +62,6 @@ export const productSchema = z
 export type ProductFormValues = z.infer<typeof productSchema>;
 export type ProductFieldName = keyof ProductFormValues;
 
-// What a form action hands back to the form
 export type ProductFormState = {
   errors?: Partial<Record<ProductFieldName, string>>;
   message?: string;
@@ -129,14 +88,6 @@ export const emptyProductValues: ProductFormValues = {
   provenance: "",
   isFeatured: false,
   status: "DRAFT",
-  sku: "",
-  price: "",
-  salePrice: "",
-  stock: "1",
-  widthCm: "",
-  heightCm: "",
-  depthCm: "",
-  weightGrams: "",
 };
 
 const text = (formData: FormData, key: string) =>
@@ -145,8 +96,7 @@ const text = (formData: FormData, key: string) =>
 const STRING_FIELDS = [
   "name", "slug", "categoryId", "subcategoryId", "artist", "shortDescription",
   "description", "material", "medium", "tags", "yearCreated", "artworkType",
-  "editionNumber", "totalEditions", "provenance", "status", "sku", "price",
-  "salePrice", "stock", "widthCm", "heightCm", "depthCm", "weightGrams",
+  "editionNumber", "totalEditions", "provenance", "status",
 ] as const;
 
 export function parseProductForm(formData: FormData) {
@@ -178,8 +128,6 @@ export function parseProductForm(formData: FormData) {
 }
 
 const toInt = (value: string) => (value === "" ? null : Number(value));
-// Prices and sizes go to the database as text, which it reads as exact decimals
-const toDecimal = (value: string) => (value === "" ? null : value);
 
 function parseTags(value: string) {
   const seen = new Set<string>();
@@ -190,39 +138,26 @@ function parseTags(value: string) {
   return [...seen].slice(0, 20);
 }
 
-// Turns the validated form into the two things we save: the product and its variant
 export function toProductDbData(data: ProductFormValues) {
   return {
-    product: {
-      name: data.name,
-      slug: data.slug,
-      categoryId: data.categoryId,
-      subcategoryId: data.subcategoryId || null,
-      artist: data.artist || null,
-      shortDescription: data.shortDescription || null,
-      description: data.description || null,
-      material: data.material || null,
-      medium: data.medium || null,
-      tags: parseTags(data.tags),
-      yearCreated: toInt(data.yearCreated),
-      artworkType: data.artworkType,
-      editionNumber: toInt(data.editionNumber),
-      totalEditions: toInt(data.totalEditions),
-      hasCertificate: data.hasCertificate,
-      isSigned: data.isSigned,
-      provenance: data.provenance || null,
-      isFeatured: data.isFeatured,
-      status: data.status,
-    },
-    variant: {
-      sku: data.sku,
-      price: data.price,
-      salePrice: toDecimal(data.salePrice),
-      stock: Number(data.stock),
-      widthCm: toDecimal(data.widthCm),
-      heightCm: toDecimal(data.heightCm),
-      depthCm: toDecimal(data.depthCm),
-      weightGrams: toInt(data.weightGrams),
-    },
+    name: data.name,
+    slug: data.slug,
+    categoryId: data.categoryId,
+    subcategoryId: data.subcategoryId || null,
+    artist: data.artist || null,
+    shortDescription: data.shortDescription || null,
+    description: data.description || null,
+    material: data.material || null,
+    medium: data.medium || null,
+    tags: parseTags(data.tags),
+    yearCreated: toInt(data.yearCreated),
+    artworkType: data.artworkType,
+    editionNumber: toInt(data.editionNumber),
+    totalEditions: toInt(data.totalEditions),
+    hasCertificate: data.hasCertificate,
+    isSigned: data.isSigned,
+    provenance: data.provenance || null,
+    isFeatured: data.isFeatured,
+    status: data.status,
   };
 }

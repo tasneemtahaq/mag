@@ -13,7 +13,7 @@ export default async function NewProductPage() {
     <div className="max-w-3xl">
       <h1 className="font-display text-4xl font-light">New product</h1>
       <p className="mt-3 text-sm text-muted-foreground">
-        You can add photos right after saving.
+         After saving you can add photos, then set prices and stock with variants.
       </p>
 
       <div className="mt-10">

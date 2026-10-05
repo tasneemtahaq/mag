@@ -32,14 +32,6 @@ async function findProblems(
     errors.slug = "Another product already uses this slug";
   }
 
-  const skuOwner = await db.productVariant.findUnique({
-    where: { sku: data.sku },
-    select: { productId: true },
-  });
-  if (skuOwner && skuOwner.productId !== productId) {
-    errors.sku = "Another product already uses this SKU";
-  }
-
   const category = await db.category.findUnique({
     where: { id: data.categoryId },
     select: { id: true },
@@ -75,9 +67,8 @@ export async function createProduct(
   const problems = await findProblems(data);
   if (problems) return { errors: problems, values };
 
-  const { product, variant } = toProductDbData(data);
   const created = await db.product.create({
-    data: { ...product, variants: { create: { name: "Standard", ...variant } } },
+    data: toProductDbData(data),
     select: { id: true },
   });
 
@@ -99,22 +90,8 @@ export async function updateProduct(
   const problems = await findProblems(data, id);
   if (problems) return { errors: problems, values };
 
-  const { product, variant } = toProductDbData(data);
-  const firstVariant = await db.productVariant.findFirst({
-    where: { productId: id, deletedAt: null },
-    orderBy: { sortOrder: "asc" },
-    select: { id: true },
-  });
-
   try {
-    await db.$transaction([
-      db.product.update({ where: { id }, data: product }),
-      firstVariant
-        ? db.productVariant.update({ where: { id: firstVariant.id }, data: variant })
-        : db.productVariant.create({
-            data: { productId: id, name: "Standard", ...variant },
-          }),
-    ]);
+    await db.product.update({ where: { id }, data: toProductDbData(data) });
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

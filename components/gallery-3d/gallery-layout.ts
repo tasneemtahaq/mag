@@ -16,6 +16,8 @@ export const DOOR_HALF = 2.75; // each of the two doors is 2.75 m wide
 export const DOOR_HEIGHT = 4;
 export const FACADE_WIDTH = 28; // the graffiti wall: 28 m wide...
 export const FACADE_HEIGHT = 6; // ...and 6 m tall
+// The spot on the wall, above the door, where the title is pinned (x, y, z in metres)
+export const TITLE_ANCHOR: Vec3 = [0, 5, FRONT_Z + 0.3];
 
 // ---------- Where artworks hang ----------
 export const HERO_CENTER_Y = 2.9;

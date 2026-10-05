@@ -8,10 +8,12 @@ import {
 } from "@/actions/products/admin-actions";
 import { ProductForm } from "@/components/admin/product-form";
 import { ProductImages } from "@/components/admin/product-images";
+import { ProductVariants } from "@/components/admin/product-variants";
 import { Button } from "@/components/ui/button";
 import {
   getAdminProduct,
   getProductFormOptions,
+  getSizeOptions,
 } from "@/lib/data/admin-products";
 
 export const metadata: Metadata = { title: "Edit product" };
@@ -25,13 +27,14 @@ export default async function EditProductPage({ params, searchParams }: Props) {
   const { id } = await params;
   const { created } = await searchParams;
 
-  const [product, categories] = await Promise.all([
+  const [product, categories, sizes] = await Promise.all([
     getAdminProduct(id),
     getProductFormOptions(),
+    getSizeOptions(),
   ]);
   if (!product) notFound();
 
-  const variant = product.variants[0];
+  const hasActiveVariant = product.variants.some((variant) => variant.isActive);
 
   return (
     <div className="max-w-3xl">
@@ -47,7 +50,17 @@ export default async function EditProductPage({ params, searchParams }: Props) {
           role="status"
           className="mt-4 border border-border bg-muted px-4 py-3 text-sm"
         >
-          Product created. Add its photos below.
+          Product created. Add its photos and its first variant below.
+        </p>
+      )}
+
+      {product.status === "ACTIVE" && !hasActiveVariant && (
+        <p
+          role="alert"
+          className="mt-4 border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          This product is Active but has no available variant, so customers
+          can&rsquo;t see or buy it. Add a variant below.
         </p>
       )}
 
@@ -62,7 +75,28 @@ export default async function EditProductPage({ params, searchParams }: Props) {
         />
       </section>
 
+      <section
+        aria-labelledby="variants-heading"
+        className="mt-16 border-t border-border pt-12"
+      >
+        <h2 id="variants-heading" className="font-display text-2xl font-light">
+          Variants, prices and stock
+        </h2>
+        <p className="mb-6 mt-2 text-sm text-muted-foreground">
+          Each variant is something a customer can buy, such as a size or a
+          framed edition. Even a one-of-a-kind painting needs one.
+        </p>
+        <ProductVariants
+          productId={product.id}
+          variants={product.variants}
+          sizes={sizes}
+        />
+      </section>
+
       <div className="mt-16 border-t border-border pt-12">
+        <h2 className="mb-8 font-display text-2xl font-light">
+          Product details
+        </h2>
         <ProductForm
           action={updateProduct.bind(null, product.id)}
           categories={categories}
@@ -87,14 +121,6 @@ export default async function EditProductPage({ params, searchParams }: Props) {
             provenance: product.provenance ?? "",
             isFeatured: product.isFeatured,
             status: product.status,
-            sku: variant?.sku ?? "",
-            price: variant?.price.toString() ?? "",
-            salePrice: variant?.salePrice?.toString() ?? "",
-            stock: variant?.stock.toString() ?? "0",
-            widthCm: variant?.widthCm?.toString() ?? "",
-            heightCm: variant?.heightCm?.toString() ?? "",
-            depthCm: variant?.depthCm?.toString() ?? "",
-            weightGrams: variant?.weightGrams?.toString() ?? "",
           }}
         />
       </div>

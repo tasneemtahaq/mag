@@ -313,41 +313,7 @@ export function ProductForm({
         />
       </fieldset>
 
-      <fieldset className="space-y-6 border-t border-border pt-10">
-        <legend className={legendClass}>Price and stock</legend>
-        <div className="grid gap-6 sm:grid-cols-2">
-          <TextField {...shared} name="sku" label="SKU" required />
-          <TextField
-            {...shared}
-            name="stock"
-            label="Stock"
-            inputMode="numeric"
-            hint="A one-of-a-kind original has a stock of 1."
-          />
-          <TextField
-            {...shared}
-            name="price"
-            label="Price (PKR)"
-            inputMode="decimal"
-            required
-          />
-          <TextField
-            {...shared}
-            name="salePrice"
-            label="Sale price (optional)"
-            inputMode="decimal"
-          />
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Size and weight, used for delivery:
-        </p>
-        <div className="grid gap-6 sm:grid-cols-4">
-          <TextField {...shared} name="widthCm" label="Width (cm)" inputMode="decimal" />
-          <TextField {...shared} name="heightCm" label="Height (cm)" inputMode="decimal" />
-          <TextField {...shared} name="depthCm" label="Depth (cm)" inputMode="decimal" />
-          <TextField {...shared} name="weightGrams" label="Weight (g)" inputMode="numeric" />
-        </div>
-      </fieldset>
+      
 
       <fieldset className="space-y-6 border-t border-border pt-10">
         <legend className={legendClass}>Publishing</legend>
