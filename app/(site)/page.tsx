@@ -9,7 +9,7 @@ export default function HomePage() {
     <>
       <Gallery3DWrapper fallback={<Hero />} />
       <FeaturedArtwork />
-      <CategoryGrid />
+      <CategoryGrid limit={6} />
       <AboutPreview />
     </>
   );

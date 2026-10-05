@@ -2,16 +2,24 @@ import Link from "next/link";
 import { Container } from "@/components/layout/container";
 import { SectionHeading } from "@/components/layout/section-heading";
 import { ArtworkPlaceholder } from "@/components/products/artwork-placeholder";
-import { getHomeCategories } from "@/lib/data/categories";
+import { getActiveCategories } from "@/lib/data/categories";
 
-export async function CategoryGrid() {
-  const categories = await getHomeCategories();
+export async function CategoryGrid({
+  limit,
+  as = "h2",
+}: {
+  limit?: number;
+  as?: "h1" | "h2";
+}) {
+  const all = await getActiveCategories();
+  const categories = limit ? all.slice(0, limit) : all;
   if (categories.length === 0) return null;
 
   return (
     <section aria-label="Browse by category" className="bg-linen py-24 sm:py-32">
       <Container>
         <SectionHeading
+          as={as}
           eyebrow="Browse"
           title="Explore by category"
           className="mb-14"
