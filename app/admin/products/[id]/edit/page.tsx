@@ -20,12 +20,12 @@ export const metadata: Metadata = { title: "Edit product" };
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; duplicated?: string }>;
 };
 
 export default async function EditProductPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { created } = await searchParams;
+  const { created, duplicated } = await searchParams;
 
   const [product, categories, sizes] = await Promise.all([
     getAdminProduct(id),
@@ -51,6 +51,16 @@ export default async function EditProductPage({ params, searchParams }: Props) {
           className="mt-4 border border-border bg-muted px-4 py-3 text-sm"
         >
           Product created. Add its photos and its first variant below.
+        </p>
+      )}
+            {duplicated && (
+        <p
+          role="status"
+          className="mt-4 border border-border bg-muted px-4 py-3 text-sm"
+        >
+          This is a copy, saved as a draft. Photos are not copied, so add new
+          ones. Variant stock starts at 0, and each SKU ends in -COPY, so review
+          the prices, stock and SKUs before activating it.
         </p>
       )}
 

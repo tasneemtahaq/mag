@@ -129,3 +129,99 @@ export async function deleteProduct(formData: FormData) {
   refreshPublicSite();
   redirect("/admin/products");
 }
+// ---------- Duplicate a product ----------
+
+async function uniqueSlug(base: string) {
+  let candidate = base;
+  let n = 2;
+  while (
+    await db.product.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    })
+  ) {
+    candidate = `${base}-${n++}`;
+  }
+  return candidate;
+}
+
+async function uniqueSku(base: string) {
+  let candidate = `${base}-COPY`;
+  let n = 2;
+  while (
+    await db.productVariant.findUnique({
+      where: { sku: candidate },
+      select: { id: true },
+    })
+  ) {
+    candidate = `${base}-COPY${n++}`;
+  }
+  return candidate;
+}
+
+export async function duplicateProduct(formData: FormData) {
+  await requireAdmin();
+
+  const source = await db.product.findFirst({
+    where: { id: idFrom(formData), deletedAt: null },
+    include: {
+      variants: {
+        where: { deletedAt: null },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      },
+    },
+  });
+  if (!source) return;
+
+  const slug = await uniqueSlug(`${source.slug}-copy`);
+
+  const variants = [];
+  for (const variant of source.variants) {
+    variants.push({
+      name: variant.name,
+      sku: await uniqueSku(variant.sku),
+      sizeId: variant.sizeId,
+      price: variant.price,
+      salePrice: variant.salePrice,
+      // Stock starts at 0, so a copy can't be sold by accident
+      stock: 0,
+      widthCm: variant.widthCm,
+      heightCm: variant.heightCm,
+      depthCm: variant.depthCm,
+      weightGrams: variant.weightGrams,
+      sortOrder: variant.sortOrder,
+      isActive: variant.isActive,
+    });
+  }
+
+  const copy = await db.product.create({
+    data: {
+      name: `${source.name} (copy)`,
+      slug,
+      categoryId: source.categoryId,
+      subcategoryId: source.subcategoryId,
+      artist: source.artist,
+      shortDescription: source.shortDescription,
+      description: source.description,
+      material: source.material,
+      medium: source.medium,
+      tags: source.tags,
+      yearCreated: source.yearCreated,
+      artworkType: source.artworkType,
+      editionNumber: null,
+      totalEditions: source.totalEditions,
+      hasCertificate: source.hasCertificate,
+      isSigned: source.isSigned,
+      provenance: source.provenance,
+      seoTitle: source.seoTitle,
+      seoDescription: source.seoDescription,
+      isFeatured: false,
+      status: "DRAFT",
+      variants: { create: variants },
+    },
+    select: { id: true },
+  });
+
+  refreshPublicSite();
+  redirect(`/admin/products/${copy.id}/edit?duplicated=1`);
+}

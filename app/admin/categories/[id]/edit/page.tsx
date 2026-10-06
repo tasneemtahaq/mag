@@ -73,8 +73,12 @@ export default async function EditCategoryPage({ params, searchParams }: Props) 
           <h2 id="subs" className="font-display text-2xl font-light">
             Subcategories
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Managing subcategories arrives with the product screens in Phase 10.
+            <p className="mt-2 text-sm text-muted-foreground">
+            Add, rename or hide them on the{" "}
+            <Link href="/admin/subcategories" className="underline">
+              Subcategories page
+            </Link>
+            .
           </p>
           <ul className="mt-4 list-inside list-disc text-sm">
             {category.subcategories.map((sub) => (

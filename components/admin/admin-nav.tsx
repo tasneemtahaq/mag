@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ExternalLink,
   Frame,
+  Layers,
   LayoutDashboard,
   Ruler,
   Tags,
@@ -10,6 +11,7 @@ import {
 const items = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/categories", label: "Categories", icon: Tags },
+  { href: "/admin/subcategories", label: "Subcategories", icon: Layers },
   { href: "/admin/products", label: "Products", icon: Frame },
   { href: "/admin/sizes", label: "Sizes", icon: Ruler },
 ] as const;
