@@ -12,7 +12,8 @@ import { siteConfig } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
 
 // A default export is required here, because next/dynamic loads it.
-export default function GalleryExperience() {
+// "lite" is the lighter version used on phones and tablets.
+export default function GalleryExperience({ lite = false }: { lite?: boolean }) {
   const trackRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
@@ -23,6 +24,7 @@ export default function GalleryExperience() {
 
   const [ready, setReady] = useState(false);
   const [onScreen, setOnScreen] = useState(true);
+  const [contextLost, setContextLost] = useState(false);
   const handleReady = useCallback(() => setReady(true), []);
 
   // Turn the scroll position into a 0-to-1 progress value
@@ -70,11 +72,15 @@ export default function GalleryExperience() {
     return () => observer.disconnect();
   }, []);
 
+  // If the device runs out of graphics memory, the error boundary above us
+  // swaps in the normal hero instead of leaving a frozen screen
+  if (contextLost) throw new Error("The graphics context was lost.");
+
   return (
     <section
       ref={trackRef}
       aria-label="Gallery tour"
-      className="relative h-[500svh]"
+      className={cn("relative", lite ? "h-[420svh]" : "h-[500svh]")}
     >
       {/* The stage has a pastel sky; the 3D canvas is transparent on top of it */}
       <div
@@ -89,7 +95,9 @@ export default function GalleryExperience() {
         >
           <Canvas
             frameloop={onScreen ? "always" : "never"}
-            dpr={[1, 1.5]}
+            dpr={lite ? [1, 1.25] : [1, 1.5]}
+            // Lets a finger scroll the page when it starts on the canvas
+            style={{ touchAction: "pan-y" }}
             camera={{ fov: START_FOV, near: 0.1, far: 150, position: [0, 1.7, 15] }}
             gl={{
               antialias: true,
@@ -98,16 +106,27 @@ export default function GalleryExperience() {
               // Keeps your artwork's colors true instead of washing them out
               toneMapping: NeutralToneMapping,
             }}
+            onCreated={({ gl }) => {
+              gl.domElement.addEventListener(
+                "webglcontextlost",
+                (event) => {
+                  event.preventDefault();
+                  setContextLost(true);
+                },
+                { once: true },
+              );
+            }}
           >
             <GalleryScene
               progress={progress}
               onReady={handleReady}
               titleRef={titleRef}
+              lite={lite}
             />
           </Canvas>
         </div>
 
-                {/* Title above the door (fades out as the doors open) */}
+        {/* Title above the door (fades out as the doors open) */}
         <div
           ref={introRef}
           className="pointer-events-none absolute inset-0 z-10"
@@ -115,12 +134,12 @@ export default function GalleryExperience() {
           {/* This block is pinned to the wall above the door, in 3D space */}
           <div
             ref={titleRef}
-            className="absolute inset-x-0 top-[31%] -translate-y-1/2 px-6 text-center"
+            className="absolute inset-x-0 top-[31%] -translate-y-1/2 px-4 text-center"
           >
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-ink/80">
               {siteConfig.hero.eyebrow}
             </p>
-            <h1 className="whitespace-nowrap font-display text-[clamp(2.25rem,5vw,4.75rem)] font-bold leading-none tracking-tight text-ink [text-shadow:0_2px_24px_rgba(255,255,255,0.9)]">
+            <h1 className="whitespace-nowrap font-display text-[clamp(1.5rem,6.4vw,4.75rem)] font-bold leading-none tracking-tight text-ink [text-shadow:0_2px_24px_rgba(255,255,255,0.9)]">
               {siteConfig.hero.title}
             </h1>
           </div>
@@ -128,7 +147,7 @@ export default function GalleryExperience() {
             aria-hidden
             className="absolute inset-x-0 bottom-8 flex flex-col items-center gap-3 text-[0.65rem] uppercase tracking-[0.3em] text-ink/70"
           >
-            <span>Scroll to enter</span>
+            <span>{lite ? "Swipe up to enter" : "Scroll to enter"}</span>
             <span className="h-12 w-px bg-ink/50" />
           </div>
         </div>

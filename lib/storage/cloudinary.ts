@@ -2,7 +2,7 @@ import "server-only";
 import { v2 as cloudinary } from "cloudinary";
 
 // Every product photo is stored inside this Cloudinary folder
-export const UPLOAD_FOLDER = "mohammadi-art-gallery/products";
+export const UPLOAD_FOLDER = "muhammadi-art-gallery/products";
 
 function getConfig() {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;

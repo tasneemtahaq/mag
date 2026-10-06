@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description:
       category.seoDescription ||
       category.description ||
-      `Browse ${category.name} at Mohammadi Art Gallery.`,
+      `Browse ${category.name} at Muhammadi Art Gallery.`,
   };
 }
 

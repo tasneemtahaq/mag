@@ -16,15 +16,15 @@ const GalleryExperience = dynamic(
 export function Gallery3DWrapper({ fallback }: { fallback: ReactNode }) {
   const mode = useGalleryMode();
 
-  if (mode === "3d") {
+  if (mode === "full" || mode === "lite") {
     return (
       <GalleryErrorBoundary fallback={fallback}>
-        <GalleryExperience />
+        <GalleryExperience lite={mode === "lite"} />
       </GalleryErrorBoundary>
     );
   }
 
-  // "pending" (server and first paint) and "static" (phones, reduced motion,
-  // no WebGL) both show the lightweight hero.
+  // "pending" (server and first paint) and "static" (reduced motion,
+  // data saver, no WebGL, very weak devices) show the lightweight hero.
   return <>{fallback}</>;
 }

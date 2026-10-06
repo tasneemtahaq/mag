@@ -1,9 +1,10 @@
 import { useSyncExternalStore } from "react";
 
-export type GalleryMode = "pending" | "3d" | "static";
+// "full" = desktop, "lite" = phones and tablets, "static" = the simple hero
+export type GalleryMode = "pending" | "full" | "lite" | "static";
 
 type ExtendedNavigator = Navigator & {
-  connection?: { saveData?: boolean };
+  connection?: { saveData?: boolean; effectiveType?: string };
   deviceMemory?: number;
 };
 
@@ -20,35 +21,48 @@ function hasWebGL(): boolean {
   }
 }
 
-function canRun3D(): boolean {
+function detectMode(): GalleryMode {
   // Visitors who asked their device to reduce motion
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    return false;
+    return "static";
   }
-  // Touch-first devices (phones, tablets) and small screens
-  if (window.matchMedia("(pointer: coarse)").matches) return false;
-  if (window.innerWidth < 1024) return false;
 
   const nav = navigator as ExtendedNavigator;
-  // Data saver turned on
-  if (nav.connection?.saveData) return false;
-  // Low-memory or low-core machines (only some browsers report these)
-  if (nav.deviceMemory !== undefined && nav.deviceMemory < 4) return false;
+  // Data saver turned on, or a very slow connection
+  if (nav.connection?.saveData) return "static";
   if (
-    navigator.hardwareConcurrency !== undefined &&
-    navigator.hardwareConcurrency < 4
+    nav.connection?.effectiveType === "slow-2g" ||
+    nav.connection?.effectiveType === "2g"
   ) {
-    return false;
+    return "static";
   }
 
-  return hasWebGL();
+  if (!hasWebGL()) return "static";
+
+  // Only some browsers report memory and cores
+  const memory = nav.deviceMemory;
+  const cores = navigator.hardwareConcurrency;
+
+  const touchFirst =
+    window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 1024;
+
+  if (touchFirst) {
+    // Phones and tablets get the lighter version, unless they are very weak
+    if (memory !== undefined && memory < 2) return "static";
+    if (cores !== undefined && cores < 4) return "static";
+    return "lite";
+  }
+
+  if (memory !== undefined && memory < 4) return "static";
+  if (cores !== undefined && cores < 4) return "static";
+  return "full";
 }
 
 // The answer is worked out once and remembered
 let cached: GalleryMode | null = null;
 
 function getSnapshot(): GalleryMode {
-  if (cached === null) cached = canRun3D() ? "3d" : "static";
+  if (cached === null) cached = detectMode();
   return cached;
 }
 

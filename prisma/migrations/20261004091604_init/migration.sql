@@ -363,7 +363,7 @@ CREATE TABLE "ShippingRule" (
 -- CreateTable
 CREATE TABLE "SiteSettings" (
     "id" TEXT NOT NULL DEFAULT 'site',
-    "storeName" TEXT NOT NULL DEFAULT 'Mohammadi Art Gallery',
+    "storeName" TEXT NOT NULL DEFAULT 'Muhammadi Art Gallery',
     "defaultCurrency" TEXT NOT NULL DEFAULT 'PKR',
     "contactEmail" TEXT,
     "contactPhone" TEXT,

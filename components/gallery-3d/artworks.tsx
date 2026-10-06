@@ -20,7 +20,7 @@ import {
   prepareTexture,
   textureAspect,
 } from "@/components/gallery-3d/texture-utils";
-import { galleryArtworkPaths } from "@/lib/gallery-artworks.generated";
+import { galleryArtworks } from "@/lib/gallery-artworks.generated";
 
 // ---------- A soft shadow texture, shared by every frame ----------
 let shadowTexture: CanvasTexture | null = null;
@@ -184,12 +184,14 @@ function SideArtwork({
   z,
   width,
   height,
+  showSpot,
 }: {
   texture: Texture;
   side: -1 | 1;
   z: number;
   width: number;
   height: number;
+  showSpot: boolean;
 }) {
   return (
     <>
@@ -200,12 +202,14 @@ function SideArtwork({
         position={[side * HALF_WIDTH, SIDE_CENTER_Y, z]}
         rotationY={(-side * Math.PI) / 2}
       />
-      <ArtSpot
-        position={[side * (HALF_WIDTH - 2.4), 5.8, z]}
-        target={[side * HALF_WIDTH, SIDE_CENTER_Y, z]}
-        intensity={120}
-        angle={0.45}
-      />
+      {showSpot && (
+        <ArtSpot
+          position={[side * (HALF_WIDTH - 2.4), 5.8, z]}
+          target={[side * HALF_WIDTH, SIDE_CENTER_Y, z]}
+          intensity={120}
+          angle={0.45}
+        />
+      )}
     </>
   );
 }
@@ -237,13 +241,18 @@ function HeroArtwork({
   );
 }
 
+// On phones only the first two pairs of paintings get their own spotlight
+const hasSpot = (lite: boolean, index: number) => !lite || index < 2;
+
 // ---------- Your images ----------
 function ImageArtworks({
   paths,
   heroSizeRef,
+  lite,
 }: {
   paths: string[];
   heroSizeRef: HeroSizeRef;
+  lite: boolean;
 }) {
   const loaded = useLoader(TextureLoader, paths);
   const textures = useMemo(() => loaded.map((t) => prepareTexture(t)), [loaded]);
@@ -281,6 +290,7 @@ function ImageArtworks({
               z={z}
               width={fit.width}
               height={fit.height}
+              showSpot={hasSpot(lite, i)}
             />
           );
         }),
@@ -290,7 +300,7 @@ function ImageArtworks({
 }
 
 // ---------- Placeholder paintings ----------
-function PlaceholderArtworks() {
+function PlaceholderArtworks({ lite }: { lite: boolean }) {
   const textures = useMemo(
     () => [
       createArtTexture(11, 960, 640), // masterpiece
@@ -314,6 +324,7 @@ function PlaceholderArtworks() {
             z={z}
             width={2.6}
             height={2.6}
+            showSpot={hasSpot(lite, i)}
           />
         )),
       )}
@@ -321,9 +332,19 @@ function PlaceholderArtworks() {
   );
 }
 
-export function Artworks({ heroSize }: { heroSize: HeroSizeRef }) {
-  if (galleryArtworkPaths.length > 0) {
-    return <ImageArtworks paths={galleryArtworkPaths} heroSizeRef={heroSize} />;
+export function Artworks({
+  heroSizeRef,
+  lite,
+}: {
+  heroSizeRef: HeroSizeRef;
+  lite: boolean;
+}) {
+  if (galleryArtworks.length > 0) {
+    // Phones download the small copies of each image
+    const paths = galleryArtworks.map((item) => (lite ? item.small : item.full));
+    return (
+      <ImageArtworks paths={paths} heroSizeRef={heroSizeRef} lite={lite} />
+    );
   }
-  return <PlaceholderArtworks />;
+  return <PlaceholderArtworks lite={lite} />;
 }

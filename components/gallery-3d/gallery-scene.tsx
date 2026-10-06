@@ -63,10 +63,12 @@ export function GalleryScene({
   progress,
   onReady,
   titleRef,
+  lite,
 }: {
   progress: ProgressRef;
   onReady: () => void;
   titleRef: RefObject<HTMLElement | null>;
+  lite: boolean;
 }) {
   const smoothRef = useRef(0);
   const heroSizeRef = useRef({ width: 6, height: 4 });
@@ -76,7 +78,11 @@ export function GalleryScene({
       <ProgressDriver target={progress} smoothRef={smoothRef} />
 
       {/* General soft light (the spotlights live with the artworks) */}
-      <hemisphereLight color="#ffffff" groundColor="#e6dfd2" intensity={0.45} />
+            <hemisphereLight
+        color="#ffffff"
+        groundColor="#e6dfd2"
+        intensity={lite ? 0.7 : 0.45}
+      />
       <ambientLight intensity={0.15} />
       <GalleryEnvironment />
 
@@ -85,7 +91,7 @@ export function GalleryScene({
       {/* Things that load image files: the screen stays on "Entering the gallery" until all are ready */}
       <Suspense fallback={null}>
         <Facade smooth={smoothRef} />
-        <Artworks heroSize={heroSizeRef} />
+        <Artworks heroSizeRef={heroSizeRef} lite={lite} />
         <SceneReady onReady={onReady} />
       </Suspense>
 

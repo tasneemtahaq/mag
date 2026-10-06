@@ -11,7 +11,7 @@ export function GalleryLoading({ className }: { className?: string }) {
       )}
     >
       <p className="font-display text-2xl font-light uppercase tracking-[0.3em] sm:text-3xl">
-        Mohammadi Art Gallery
+        Muhammadi Art Gallery
       </p>
       <p className="mt-4 text-xs uppercase tracking-[0.3em] text-muted-foreground">
         Entering the gallery&hellip;

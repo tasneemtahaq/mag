@@ -57,7 +57,7 @@ export function buildCameraKeys(): CameraKey[] {
     { t: 0.25, position: [0, 1.7, 6.5], look: [0, 2.6, -6] }, // doors open
     { t: 0.4, position: [0, 1.7, -3], look: [-3.5, 2.4, -12] }, // inside
     { t: 0.55, position: [0.4, 1.7, -11], look: [4, 2.4, -18] }, // passing artworks
-    { t: 0.7, position: [0, 1.75, -16], look: [0, 2.6, -29] }, // turning to the masterpiece
+    { t: 0.7, position: [0, 1.75, -14], look: [0, 2.6, -29] }, // turning to the masterpiece
     { t: 0.85, position: [0, 2.1, -22], look: [0, HERO_CENTER_Y, BACK_Z] },
     { t: 1.0, position: [0, 2.6, -26], look: [0, HERO_CENTER_Y, BACK_Z] },
   ];

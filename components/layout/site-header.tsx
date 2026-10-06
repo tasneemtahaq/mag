@@ -26,10 +26,10 @@ export function SiteHeader() {
         <div className="flex shrink-0 lg:flex-1">
           <Link
             href="/"
-            aria-label="Mohammadi Art Gallery, home"
+            aria-label="Muhammadi Art Gallery, home"
             className="font-display text-lg uppercase tracking-[0.25em] sm:text-xl"
           >
-            Mohammadi
+            Muhammadi
             <span className="hidden sm:inline"> Art Gallery</span>
           </Link>
         </div>

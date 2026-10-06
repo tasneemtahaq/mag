@@ -490,7 +490,7 @@ model ShippingRule {
 // A single row (id "site") holding store-wide settings
 model SiteSettings {
   id                    String   @id @default("site")
-  storeName             String   @default("Mohammadi Art Gallery")
+  storeName             String   @default("Muhammadi Art Gallery")
   defaultCurrency       String   @default("PKR")
   contactEmail          String?
   contactPhone          String?

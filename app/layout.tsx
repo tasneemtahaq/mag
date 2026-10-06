@@ -18,8 +18,8 @@ const sans = Jost({
 
 export const metadata: Metadata = {
   title: {
-    default: "Mohammadi Art Gallery",
-    template: "%s | Mohammadi Art Gallery",
+    default: "Muhammadi Art Gallery",
+    template: "%s | Muhammadi Art Gallery",
   },
   description:
     "A premium online art gallery. Discover and collect original artwork, prints, calligraphy and more.",

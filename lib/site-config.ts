@@ -3,18 +3,18 @@
 // Replace them with the gallery's real details.
 
 export const siteConfig = {
-  name: "Mohammadi Art Gallery",
+  name: "Muhammadi Art Gallery",
   tagline: "Original art, prints and heritage crafts from Pakistan.",
     hero: {
     eyebrow: "Online Gallery",
-    title: "Mohammadi Art Gallery",
+    title: "Muhammadi Art Gallery",
     description:
       "A contemporary space for collecting original artwork, prints, calligraphy and more.",
   },
   contact: {
     phone: "+92 3335154855",
     email: "mag@gmail.com",
-    address: "Mohammadi Art Gallery, 54D Haider Road Saddar, Rawalpindi, Pakistan",
+    address: "Muhammadi Art Gallery, 54D Haider Road Saddar, Rawalpindi, Pakistan",
   },
   // Add entries like { label: "Instagram", href: "https://..." }.
   // The footer shows this section only when the list is not empty.

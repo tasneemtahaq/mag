@@ -26,7 +26,7 @@ export default function DesignSystemPage() {
           as="h1"
           eyebrow="Internal"
           title="Design system"
-          description="Colors, typography and controls for Mohammadi Art Gallery. This page is temporary."
+          description="Colors, typography and controls for Muhammadi Art Gallery. This page is temporary."
         />
 
         <section aria-labelledby="colors">
