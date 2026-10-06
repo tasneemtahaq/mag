@@ -10,6 +10,8 @@ import type {
   ProductFormState,
   ProductFormValues,
 } from "@/lib/validation/product";
+import { uploadedImagesSchema } from "@/lib/validation/uploaded-image";
+import type { UploadedImage } from "@/lib/validation/uploaded-image";
 
 function refreshPublicSite() {
   revalidatePath("/", "layout");
@@ -64,11 +66,45 @@ export async function createProduct(
   if (!parsed.success) return parsed.state;
   const { data, values } = parsed;
 
+  // Photos the form already uploaded to Cloudinary (up to 4)
+  let photos: UploadedImage[] = [];
+  const rawPhotos = String(formData.get("images") ?? "");
+  if (rawPhotos) {
+    let json: unknown = null;
+    try {
+      json = JSON.parse(rawPhotos);
+    } catch {
+      json = null;
+    }
+    const checked = uploadedImagesSchema.safeParse(json);
+    if (!checked.success) {
+      return {
+        message:
+          "The uploaded photos could not be read. Please remove them and upload them again.",
+        values,
+      };
+    }
+    photos = checked.data;
+  }
+
   const problems = await findProblems(data);
   if (problems) return { errors: problems, values };
 
   const created = await db.product.create({
-    data: toProductDbData(data),
+    data: {
+      ...toProductDbData(data),
+      images: {
+        create: photos.map((photo, index) => ({
+          url: photo.url,
+          publicId: photo.publicId,
+          width: photo.width,
+          height: photo.height,
+          sortOrder: index,
+          // The first photo is the main one
+          isMain: index === 0,
+        })),
+      },
+    },
     select: { id: true },
   });
 

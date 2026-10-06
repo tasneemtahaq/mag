@@ -4,11 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { db } from "@/lib/db/prisma";
-import {
-  UPLOAD_FOLDER,
-  createUploadSignature,
-  deleteImage,
-} from "@/lib/storage/cloudinary";
+import { createUploadSignature, deleteImage } from "@/lib/storage/cloudinary";
+import { MAX_PRODUCT_IMAGES, UPLOAD_FOLDER } from "@/lib/storage/limits";
+import { uploadedImageSchema } from "@/lib/validation/uploaded-image";
 
 function refresh(productId: string) {
   revalidatePath(`/admin/products/${productId}/edit`);
@@ -17,36 +15,43 @@ function refresh(productId: string) {
 
 const idFrom = (formData: FormData) => String(formData.get("id") ?? "");
 
-// Step 2 of the upload: only an admin can get a signature
+// Step 1 of an upload: only an admin can get a signature
 export async function getUploadSignature() {
   await requireAdmin();
   return createUploadSignature();
 }
 
-// What the browser reports after Cloudinary has stored a photo.
-// We only accept photos that live in OUR folder on Cloudinary.
-const uploadedImageSchema = z.object({
-  publicId: z.string().startsWith(`${UPLOAD_FOLDER}/`),
-  url: z.string().startsWith("https://res.cloudinary.com/"),
-  width: z.number().int().positive(),
-  height: z.number().int().positive(),
-});
-
 export async function addProductImages(productId: string, images: unknown) {
   await requireAdmin();
 
-  const parsed = z.array(uploadedImageSchema).min(1).max(20).safeParse(images);
+  const parsed = z
+    .array(uploadedImageSchema)
+    .min(1)
+    .max(MAX_PRODUCT_IMAGES)
+    .safeParse(images);
   if (!parsed.success) {
-    return { ok: false as const, message: "The uploaded image details were not valid." };
+    return {
+      ok: false as const,
+      message: "The uploaded image details were not valid.",
+    };
   }
 
-  const [last, mainCount] = await Promise.all([
+  const [existing, last, mainCount] = await Promise.all([
+    db.productImage.count({ where: { productId } }),
     db.productImage.aggregate({
       where: { productId },
       _max: { sortOrder: true },
     }),
     db.productImage.count({ where: { productId, isMain: true } }),
   ]);
+
+  if (existing + parsed.data.length > MAX_PRODUCT_IMAGES) {
+    return {
+      ok: false as const,
+      message: `A product can have at most ${MAX_PRODUCT_IMAGES} photos. Delete one to add another.`,
+    };
+  }
+
   const firstOrder = (last._max.sortOrder ?? -1) + 1;
 
   await db.productImage.createMany({
@@ -64,6 +69,23 @@ export async function addProductImages(productId: string, images: unknown) {
 
   refresh(productId);
   return { ok: true as const };
+}
+
+// Removes a photo that was uploaded but never attached to a product
+export async function discardUploadedImage(publicId: string) {
+  await requireAdmin();
+  if (typeof publicId !== "string" || !publicId.startsWith(`${UPLOAD_FOLDER}/`)) {
+    return;
+  }
+  // Never remove a photo that a product is using
+  const stillUsed = await db.productImage.count({ where: { publicId } });
+  if (stillUsed > 0) return;
+
+  try {
+    await deleteImage(publicId);
+  } catch (error) {
+    console.error("Could not discard the uploaded image", error);
+  }
 }
 
 export async function setMainImage(formData: FormData) {

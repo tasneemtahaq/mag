@@ -7,6 +7,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PhotoPicker } from "@/components/admin/photo-picker";
 import { cn } from "@/lib/utils";
 import { emptyProductValues } from "@/lib/validation/product";
 import type {
@@ -174,6 +175,7 @@ export function ProductForm({
   initial,
   categories,
   submitLabel,
+  withPhotos = false,
 }: {
   action: (
     state: ProductFormState,
@@ -182,6 +184,7 @@ export function ProductForm({
   initial?: ProductFormValues;
   categories: CategoryOption[];
   submitLabel: string;
+  withPhotos?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
 
@@ -199,6 +202,12 @@ export function ProductForm({
         >
           {state.message}
         </p>
+      )}
+        {withPhotos && (
+        <fieldset className="space-y-6">
+          <legend className={legendClass}>Photos (up to 4)</legend>
+          <PhotoPicker />
+        </fieldset>
       )}
 
       <fieldset className="space-y-6">

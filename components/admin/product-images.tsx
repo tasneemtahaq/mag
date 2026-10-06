@@ -9,6 +9,7 @@ import { ImageUploader } from "@/components/admin/image-uploader";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { MAX_PRODUCT_IMAGES } from "@/lib/storage/limits";
 
 type ProductImageItem = {
   id: string;
@@ -30,7 +31,10 @@ export function ProductImages({
   images: ProductImageItem[];
 }) {
   return (
-    <div className="space-y-8">
+      <div className="space-y-8">
+       <p className="text-sm text-muted-foreground">
+        {images.length} of {MAX_PRODUCT_IMAGES} photos
+      </p>
       {images.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No photos yet. The first photo you upload becomes the main image.
@@ -103,7 +107,7 @@ export function ProductImages({
         </ul>
       )}
 
-      <ImageUploader productId={productId} />
+       <ImageUploader productId={productId} currentCount={images.length} />
     </div>
   );
 }

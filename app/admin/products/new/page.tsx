@@ -13,7 +13,8 @@ export default async function NewProductPage() {
     <div className="max-w-3xl">
       <h1 className="font-display text-4xl font-light">New product</h1>
       <p className="mt-3 text-sm text-muted-foreground">
-         After saving you can add photos, then set prices and stock with variants.
+        Add up to 4 photos and the artwork&rsquo;s details. After saving, you can
+        set its prices and stock with variants.
       </p>
 
       <div className="mt-10">
@@ -30,6 +31,7 @@ export default async function NewProductPage() {
             action={createProduct}
             categories={categories}
             submitLabel="Create product"
+            withPhotos
           />
         )}
       </div>
