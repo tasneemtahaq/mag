@@ -3,19 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/layout/container";
 import { SectionHeading } from "@/components/layout/section-heading";
-import {
-  getActiveCategories,
-  getCategoryBySlug,
-} from "@/lib/data/categories";
+import { CategoryChips } from "@/components/products/category-chips";
+import { ProductListing } from "@/components/products/product-listing";
+import { getCategoryBySlug } from "@/lib/data/categories";
 
-type Props = { params: Promise<{ category: string }> };
-
-// Build the pages for every visible category in advance (fast).
-// A category created later is built the first time somebody visits it.
-export async function generateStaticParams() {
-  const categories = await getActiveCategories();
-  return categories.map((category) => ({ category: category.slug }));
-}
+type Props = {
+  params: Promise<{ category: string }>;
+  searchParams: Promise<{ sort?: string; page?: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { category: slug } = await params;
@@ -31,8 +26,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function CategoryPage({ params }: Props) {
+export default async function CategoryPage({ params, searchParams }: Props) {
   const { category: slug } = await params;
+  const { sort, page } = await searchParams;
   const category = await getCategoryBySlug(slug);
 
   // Unknown, switched-off and archived categories all give a 404
@@ -76,9 +72,17 @@ export default async function CategoryPage({ params }: Props) {
         </p>
       )}
 
-      <p className="mt-16 border-t border-border pt-10 text-muted-foreground">
-        Artwork in this category is coming soon.
-      </p>
+      <div className="mt-10">
+        <CategoryChips currentSlug={category.slug} />
+      </div>
+      <div className="mt-10">
+        <ProductListing
+          basePath={`/shop/${category.slug}`}
+          categorySlug={category.slug}
+          sort={sort}
+          page={page}
+        />
+      </div>
     </Container>
   );
 }

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Container } from "@/components/layout/container";
 import { SectionHeading } from "@/components/layout/section-heading";
-import { ProductCard } from "@/components/products/product-card";
+import { ProductGrid } from "@/components/products/product-grid";
 import { getFeaturedProducts } from "@/lib/data/products";
 
 export async function FeaturedArtwork() {
-  const products = await getFeaturedProducts();
+  const products = await getFeaturedProducts(3);
   if (products.length === 0) return null;
 
   return (
@@ -20,13 +20,7 @@ export async function FeaturedArtwork() {
             View all artwork
           </Link>
         </div>
-        <ul className="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
-            <li key={product.id}>
-              <ProductCard product={product} />
-            </li>
-          ))}
-        </ul>
+        <ProductGrid products={products} />
       </Container>
     </section>
   );
