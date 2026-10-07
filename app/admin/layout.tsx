@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { signOut } from "@/actions/auth/sign-out";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { requireAdmin } from "@/lib/auth/require-admin";
 
@@ -16,21 +17,28 @@ export default async function AdminLayout({
 }: {
   children: ReactNode;
 }) {
-  await requireAdmin();
+  const user = await requireAdmin();
 
   return (
     <div className="min-h-screen md:flex">
-      <aside className="border-b border-border bg-linen p-3 md:w-60 md:shrink-0 md:border-b-0 md:border-r md:p-6">
+      <aside className="border-b border-border bg-linen p-3 md:flex md:w-60 md:shrink-0 md:flex-col md:border-b-0 md:border-r md:p-6">
         <p className="mb-4 hidden font-display text-lg uppercase tracking-[0.2em] md:block">
           Admin
         </p>
         <AdminNav />
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3 md:mt-auto md:flex-col md:items-start md:pt-6">
+          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="text-xs uppercase tracking-[0.15em] underline-offset-8 hover:underline"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </aside>
       <div className="min-w-0 flex-1">
-        <p className="bg-gold/15 px-6 py-2 text-xs text-ink/80">
-          Development mode: the admin area only works on your own computer until
-          login is built.
-        </p>
         <main className="p-6 md:p-10">{children}</main>
       </div>
     </div>
