@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useTransition } from "react";
+import { addToCart } from "@/actions/cart/cart-actions";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { CART_EVENT, MAX_LINE_QUANTITY } from "@/lib/cart/constants";
 import { formatDimensions, formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -20,8 +22,6 @@ export type PurchaseVariant = {
   weightGrams: number | null;
 };
 
-const MAX_QUANTITY = 10;
-
 function formatWeight(grams: number) {
   return grams >= 1000 ? `${(grams / 1000).toFixed(1)} kg` : `${grams} g`;
 }
@@ -31,12 +31,17 @@ export function ProductPurchase({ variants }: { variants: PurchaseVariant[] }) {
   const first = variants.find((item) => item.stock > 0) ?? variants[0];
   const [variantId, setVariantId] = useState(first?.id ?? "");
   const [quantity, setQuantity] = useState(1);
+  const [notice, setNotice] = useState<{
+    type: "added" | "error";
+    text: string;
+  } | null>(null);
+  const [pending, startTransition] = useTransition();
 
   const variant = variants.find((item) => item.id === variantId) ?? first;
   if (!variant) return null;
 
   const soldOut = variant.stock <= 0;
-  const maxQuantity = Math.min(variant.stock, MAX_QUANTITY);
+  const maxQuantity = Math.min(variant.stock, MAX_LINE_QUANTITY);
   const price = variant.salePrice ?? variant.price;
   const dimensions = formatDimensions(
     variant.widthCm,
@@ -47,6 +52,21 @@ export function ProductPurchase({ variants }: { variants: PurchaseVariant[] }) {
   function choose(id: string) {
     setVariantId(id);
     setQuantity(1);
+    setNotice(null);
+  }
+
+  function handleAdd() {
+    setNotice(null);
+    startTransition(async () => {
+      // The server checks the artwork, the stock and the price itself
+      const result = await addToCart(variant.id, quantity);
+      if (result.ok) {
+        window.dispatchEvent(new CustomEvent(CART_EVENT, { detail: result.count }));
+        setNotice({ type: "added", text: "Added to your cart." });
+      } else {
+        setNotice({ type: "error", text: result.message });
+      }
+    });
   }
 
   return (
@@ -82,7 +102,7 @@ export function ProductPurchase({ variants }: { variants: PurchaseVariant[] }) {
                   className={cn(
                     "block border border-border px-4 py-3 text-sm transition-colors hover:border-ink",
                     "peer-checked:border-ink peer-checked:bg-ink peer-checked:text-ivory",
-                    "peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-gold-deep",
+                    "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-gold-deep",
                     item.stock <= 0 && "text-muted-foreground line-through",
                   )}
                 >
@@ -143,7 +163,10 @@ export function ProductPurchase({ variants }: { variants: PurchaseVariant[] }) {
           <select
             id="quantity"
             value={quantity}
-            onChange={(event) => setQuantity(Number(event.target.value))}
+            onChange={(event) => {
+              setQuantity(Number(event.target.value));
+              setNotice(null);
+            }}
             className="flex h-10 w-24 border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             {Array.from({ length: maxQuantity }, (_, index) => index + 1).map(
@@ -157,15 +180,48 @@ export function ProductPurchase({ variants }: { variants: PurchaseVariant[] }) {
         </div>
       )}
 
-      {/* The real cart arrives in Phase 13. Until then the button stays off. */}
       <div className="space-y-3">
-        <Button size="lg" className="w-full" disabled>
-          {soldOut ? "Sold" : "Add to cart"}
+        <Button
+          size="lg"
+          className="w-full"
+          disabled={soldOut || pending}
+          onClick={handleAdd}
+        >
+          {soldOut ? "Sold" : pending ? "Adding…" : "Add to cart"}
         </Button>
+
+        {notice && (
+          <div
+            role={notice.type === "error" ? "alert" : "status"}
+            className="space-y-3"
+          >
+            <p
+              className={cn(
+                "text-sm",
+                notice.type === "error" && "text-destructive",
+              )}
+            >
+              {notice.text}
+            </p>
+            {notice.type === "added" && (
+              <Link
+                href="/cart"
+                className={buttonVariants({
+                  variant: "outline",
+                  size: "lg",
+                  className: "w-full",
+                })}
+              >
+                View cart
+              </Link>
+            )}
+          </div>
+        )}
+
         <p className="text-sm text-muted-foreground">
-          Online ordering opens soon. To ask about this artwork,{" "}
+          Questions about this artwork?{" "}
           <Link href="/contact" className="underline underline-offset-4">
-            contact the gallery
+            Contact the gallery
           </Link>
           .
         </p>

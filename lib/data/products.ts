@@ -46,7 +46,7 @@ export function parsePage(value: string | undefined) {
 // ---------- The one rule for what customers can see ----------
 const ACTIVE_VARIANT = { isActive: true, deletedAt: null } as const;
 
-function visibleWhere(categorySlug?: string): Prisma.ProductWhereInput {
+export function visibleWhere(categorySlug?: string): Prisma.ProductWhereInput {
   return {
     status: "ACTIVE",
     deletedAt: null,

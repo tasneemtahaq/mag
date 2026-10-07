@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Heart, Search, ShoppingBag, User } from "lucide-react";
+import { Heart, Search, User } from "lucide-react";
+import { CartLink } from "@/components/cart/cart-link";
 import { Container } from "@/components/layout/container";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { buttonVariants } from "@/components/ui/button";
@@ -62,9 +63,7 @@ export function SiteHeader() {
           >
             <User className="size-5" />
           </Link>
-          <Link href="/cart" aria-label="Cart" className={iconLink}>
-            <ShoppingBag className="size-5" />
-          </Link>
+          <CartLink />
         </div>
       </Container>
     </header>
