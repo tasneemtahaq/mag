@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Cormorant_Garamond, Jost } from "next/font/google";
+import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
 const display = Cormorant_Garamond({
@@ -17,7 +18,8 @@ const sans = Jost({
 });
 
 export const metadata: Metadata = {
-  title: {
+    metadataBase: new URL(getSiteUrl()),
+    title: {
     default: "Muhammadi Art Gallery",
     template: "%s | Muhammadi Art Gallery",
   },

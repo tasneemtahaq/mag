@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "@/lib/db/prisma";
 import type { Prisma } from "@/generated/prisma/client";
+import { cache } from "react";
 
 // ---------- What a product card needs ----------
 export type ProductCardData = {
@@ -197,4 +198,98 @@ export async function getProductsPage({
   });
 
   return { products: rows.map(toCard), total, page: current, pageCount };
+}
+// ---------- One product, for its own page ----------
+
+export const getProductBySlug = cache(async (slug: string) => {
+  const product = await db.product.findFirst({
+    where: { ...visibleWhere(), slug },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      artist: true,
+      shortDescription: true,
+      description: true,
+      material: true,
+      medium: true,
+      yearCreated: true,
+      artworkType: true,
+      editionNumber: true,
+      totalEditions: true,
+      hasCertificate: true,
+      isSigned: true,
+      provenance: true,
+      seoTitle: true,
+      seoDescription: true,
+      categoryId: true,
+      category: { select: { name: true, slug: true } },
+      subcategory: { select: { name: true } },
+      images: {
+        orderBy: [{ isMain: "desc" }, { sortOrder: "asc" }],
+        select: { id: true, url: true, alt: true },
+      },
+      variants: {
+        where: ACTIVE_VARIANT,
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          price: true,
+          salePrice: true,
+          stock: true,
+          widthCm: true,
+          heightCm: true,
+          depthCm: true,
+          weightGrams: true,
+          size: { select: { name: true } },
+        },
+      },
+    },
+  });
+  if (!product) return null;
+
+  return {
+    ...product,
+    // Plain numbers, so they can be handed to the browser-side components
+    variants: product.variants.map((variant) => ({
+      id: variant.id,
+      name: variant.name,
+      sku: variant.sku,
+      sizeName: variant.size?.name ?? null,
+      price: variant.price.toNumber(),
+      salePrice: variant.salePrice?.toNumber() ?? null,
+      stock: variant.stock,
+      widthCm: variant.widthCm?.toNumber() ?? null,
+      heightCm: variant.heightCm?.toNumber() ?? null,
+      depthCm: variant.depthCm?.toNumber() ?? null,
+      weightGrams: variant.weightGrams,
+    })),
+  };
+});
+
+export async function getRelatedProducts(
+  productId: string,
+  categoryId: string,
+  limit = 3,
+) {
+  const rows = await db.product.findMany({
+    where: { ...visibleWhere(), id: { not: productId }, categoryId },
+    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+    take: limit,
+    select: cardSelect,
+  });
+  return rows.map(toCard);
+}
+
+// For building the product pages in advance
+export async function getVisibleProductSlugs(limit = 200) {
+  const rows = await db.product.findMany({
+    where: visibleWhere(),
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: { slug: true },
+  });
+  return rows.map((row) => row.slug);
 }
