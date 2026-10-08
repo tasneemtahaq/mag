@@ -24,3 +24,7 @@ export function formatDimensions(
   const inches = parts.map((value) => round1(value / CM_PER_INCH)).join(" × ");
   return `${cm} cm (${inches} in)`;
 }
+// The sequential number shown to customers: order 1 becomes MAG-1001
+export function formatOrderNumber(number: number) {
+  return `MAG-${1000 + number}`;
+}

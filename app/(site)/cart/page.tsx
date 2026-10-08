@@ -13,6 +13,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { getCartView } from "@/lib/data/cart";
 import type { CartLine } from "@/lib/data/cart";
 import { formatPrice } from "@/lib/format";
+import { isCheckoutEnabled } from "@/lib/checkout/enabled";
 
 export const metadata: Metadata = {
   title: "Cart",
@@ -37,6 +38,7 @@ function issueText(line: CartLine) {
 
 export default async function CartPage() {
   const cart = await getCartView();
+  const checkoutOpen = isCheckoutEnabled();
 
   if (cart.lines.length === 0) {
     return (
@@ -196,15 +198,26 @@ export default async function CartPage() {
               </p>
             )}
 
-            <div className="mt-6 space-y-3">
-              <Button size="lg" className="w-full" disabled>
-                Checkout
-              </Button>
-              <p className="text-center text-xs text-muted-foreground">
-                Checkout opens soon.
-              </p>
+                        <div className="mt-6 space-y-3">
+              {checkoutOpen && !cart.hasIssues ? (
+                <Link
+                  href="/checkout"
+                  className={buttonVariants({ size: "lg", className: "w-full" })}
+                >
+                  Checkout
+                </Link>
+              ) : (
+                <Button size="lg" className="w-full" disabled>
+                  Checkout
+                </Button>
+              )}
+              {!checkoutOpen && (
+                <p className="text-center text-xs text-muted-foreground">
+                  Checkout opens soon.
+                </p>
+              )}
             </div>
-          </div>
+            </div>
 
           <p className="mt-6 text-sm text-muted-foreground">
             <Link href="/shop" className="underline underline-offset-4">
