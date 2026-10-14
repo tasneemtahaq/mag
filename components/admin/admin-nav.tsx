@@ -6,6 +6,8 @@ import {
   LayoutDashboard,
   Ruler,
   Tags,
+  Ticket,
+  Truck,
 } from "lucide-react";
 
 const items = [
@@ -14,6 +16,8 @@ const items = [
   { href: "/admin/subcategories", label: "Subcategories", icon: Layers },
   { href: "/admin/products", label: "Products", icon: Frame },
   { href: "/admin/sizes", label: "Sizes", icon: Ruler },
+  { href: "/admin/shipping", label: "Shipping", icon: Truck },
+  { href: "/admin/discounts", label: "Discounts", icon: Ticket },
 ] as const;
 
 const linkClass =

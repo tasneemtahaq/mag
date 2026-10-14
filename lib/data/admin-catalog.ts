@@ -32,3 +32,13 @@ export async function getAdminSubcategoryGroups() {
     },
   });
 }
+export async function getShippingAdmin() {
+  await requireAdmin();
+  const [settings, rules] = await Promise.all([
+    db.siteSettings.findUnique({ where: { id: "site" } }),
+    db.shippingRule.findMany({
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    }),
+  ]);
+  return { settings, rules };
+}
