@@ -8,6 +8,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { getSession } from "@/lib/auth/session";
 import { isCheckoutEnabled } from "@/lib/checkout/enabled";
 import { getCartView } from "@/lib/data/cart";
+import { getEnabledPaymentMethods } from "@/lib/data/payments";
 import { db } from "@/lib/db/prisma";
 
 export const metadata: Metadata = {
@@ -15,28 +16,41 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+function NotOpen({ text }: { text: string }) {
+  return (
+    <Container size="narrow" className="py-20 sm:py-28">
+      <SectionHeading
+        as="h1"
+        eyebrow="Checkout"
+        title="Checkout opens soon"
+        description={text}
+      />
+      <div className="mt-10 flex flex-wrap gap-4">
+        <Link href="/contact" className={buttonVariants({ size: "lg" })}>
+          Contact the gallery
+        </Link>
+        <Link
+          href="/shop"
+          className={buttonVariants({ variant: "outline", size: "lg" })}
+        >
+          Continue browsing
+        </Link>
+      </div>
+    </Container>
+  );
+}
+
 export default async function CheckoutPage() {
   if (!isCheckoutEnabled()) {
     return (
-      <Container size="narrow" className="py-20 sm:py-28">
-        <SectionHeading
-          as="h1"
-          eyebrow="Checkout"
-          title="Checkout opens soon"
-          description="Online ordering isn't open yet. If you would like to enquire about an artwork, please contact the gallery."
-        />
-        <div className="mt-10 flex flex-wrap gap-4">
-          <Link href="/contact" className={buttonVariants({ size: "lg" })}>
-            Contact the gallery
-          </Link>
-          <Link
-            href="/shop"
-            className={buttonVariants({ variant: "outline", size: "lg" })}
-          >
-            Continue browsing
-          </Link>
-        </div>
-      </Container>
+      <NotOpen text="Online ordering isn't open yet. If you would like to enquire about an artwork, please contact the gallery." />
+    );
+  }
+
+  const { methods } = await getEnabledPaymentMethods();
+  if (methods.length === 0) {
+    return (
+      <NotOpen text="Online ordering is almost ready. If you would like to enquire about an artwork, please contact the gallery." />
     );
   }
 
@@ -83,6 +97,7 @@ export default async function CheckoutPage() {
             email: session?.user.email ?? "",
           }}
           addresses={addresses}
+          methods={methods.map(({ method, label }) => ({ method, label }))}
         />
       </div>
     </Container>

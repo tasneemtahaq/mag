@@ -28,3 +28,12 @@ export function formatDimensions(
 export function formatOrderNumber(number: number) {
   return `MAG-${1000 + number}`;
 }
+// "4 Oct 2026, 3:15 pm" in Pakistan time.
+// (The official name of Pakistan's time zone in computers is Asia/Karachi.)
+export function formatDateTime(date: Date) {
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Karachi",
+  }).format(date);
+}

@@ -4,27 +4,28 @@ export type Vec3 = [number, number, number];
 export type ProgressRef = { current: number };
 export type HeroSizeRef = { current: { width: number; height: number } };
 
-// ---------- Building dimensions (in metres) ----------
-export const HALF_WIDTH = 6;
-export const ROOM_HEIGHT = 6;
-export const FRONT_Z = 4; // the entrance wall
-export const BACK_Z = -30; // the far wall, where the masterpiece hangs
-export const ROOM_DEPTH = FRONT_Z - BACK_Z;
-export const ROOM_CENTER_Z = (FRONT_Z + BACK_Z) / 2;
+// ---------- The corridor (in metres). It runs away from us along negative z. ----------
+export const HALF_WIDTH = 3.4;
+export const CEILING_Y = 9;
+export const START_Z = 6.5; // the wall behind the camera
+export const HALL_END_Z = -11.5; // the cream entrance hall ends, terracotta begins
+export const CHAMBER_Z = -30; // terracotta ends, the cream end chamber begins
+export const BACK_Z = -36; // the far wall, where the masterpiece hangs
 
-export const DOOR_HALF = 2.75; // each of the two doors is 2.75 m wide
-export const DOOR_HEIGHT = 4;
-export const FACADE_WIDTH = 28; // the graffiti wall: 28 m wide...
-export const FACADE_HEIGHT = 6; // ...and 6 m tall
-// The spot on the wall, above the door, where the title is pinned (x, y, z in metres)
-export const TITLE_ANCHOR: Vec3 = [0, 5, FRONT_Z + 0.3];
+// ---------- Track lighting ----------
+export const RAIL_Y = 7.4;
+export const RAIL_X = 2.1;
+export const FIXTURE_Z = Array.from(
+  { length: 11 },
+  (_, index) => 1.5 - index * 3.25,
+);
 
-// ---------- Where artworks hang ----------
-export const HERO_CENTER_Y = 2.9;
-export const HERO_MAX_SIZE = { width: 7, height: 4.4 };
+// ---------- Where artworks hang (every second light has a painting below it) ----------
+export const SIDE_Z = [1, 3, 5, 7, 9].map((index) => FIXTURE_Z[index]);
 export const SIDE_CENTER_Y = 2.5;
-export const SIDE_MAX_SIZE = { width: 2.8, height: 3.2 };
-export const SIDE_Z = [-4, -11, -18, -25];
+export const SIDE_MAX_SIZE = { width: 2.6, height: 3.2 };
+export const HERO_CENTER_Y = 2.9;
+export const HERO_MAX_SIZE = { width: 5.4, height: 3.8 };
 
 // ---------- Camera lens ----------
 export const START_FOV = 50;
@@ -37,29 +38,30 @@ export function smoothstep(edge0: number, edge1: number, x: number) {
   return t * t * (3 - 2 * t);
 }
 
-// The doors slide open between 6% and 22% of the scroll journey
-export const DOOR_OPEN_START = 0.06;
-export const DOOR_OPEN_END = 0.22;
+// The frosted door slides away over the first 20% of the scroll
+export const DOOR_START = 0;
+export const DOOR_END = 0.2;
 
-export function doorOpenAmount(progress: number) {
-  return smoothstep(DOOR_OPEN_START, DOOR_OPEN_END, progress);
-}
-
-export type CameraKey = { t: number; position: Vec3; look: Vec3 };
+// still: the camera pauses at this key (no speed), which keeps it from drifting
+export type CameraKey = {
+  t: number;
+  position: Vec3;
+  look: Vec3;
+  still?: boolean;
+};
 
 // Where the camera is (and looks) at key moments of the scroll.
 // The z values of the last two keys are recalculated every frame so the
 // masterpiece always fills the screen, whatever shape your image is.
 export function buildCameraKeys(): CameraKey[] {
   return [
-    { t: 0.0, position: [0, 1.7, 15], look: [0, 3.0, FRONT_Z] }, // closed doors
-    { t: 0.1, position: [0, 1.7, 12.5], look: [0, 2.8, FRONT_Z] }, // doors opening
-    { t: 0.25, position: [0, 1.7, 6.5], look: [0, 2.6, -6] }, // doors open
-    { t: 0.4, position: [0, 1.7, -3], look: [-3.5, 2.4, -12] }, // inside
-    { t: 0.55, position: [0.4, 1.7, -11], look: [4, 2.4, -18] }, // passing artworks
-    { t: 0.7, position: [0, 1.75, -14], look: [0, 2.6, -29] }, // turning to the masterpiece
-    { t: 0.85, position: [0, 2.1, -22], look: [0, HERO_CENTER_Y, BACK_Z] },
-    { t: 1.0, position: [0, 2.6, -26], look: [0, HERO_CENTER_Y, BACK_Z] },
+    { t: 0.0, position: [0, 1.65, 4.5], look: [0, 2.7, -20] }, // the door is closed
+    { t: 0.14, position: [0, 1.65, 4.5], look: [0, 2.7, -20], still: true }, // door opening
+    { t: 0.32, position: [0, 1.65, -5], look: [-1.2, 2.5, -16] }, // stepping in
+    { t: 0.5, position: [0.3, 1.65, -12], look: [1.2, 2.5, -24] }, // passing the artworks
+    { t: 0.7, position: [0, 1.7, -19], look: [0, 2.7, BACK_Z] }, // turning to the masterpiece
+    { t: 0.85, position: [0, 2.1, -26], look: [0, HERO_CENTER_Y, BACK_Z] },
+    { t: 1.0, position: [0, 2.5, -30], look: [0, HERO_CENTER_Y, BACK_Z] },
   ];
 }
 
@@ -69,8 +71,8 @@ function tangent(
   which: "position" | "look",
   axis: number,
 ) {
-  // Start and end gently: zero speed at the very first and last key
-  if (index === 0 || index === keys.length - 1) return 0;
+  // Start and end gently, and stand still on "still" keys
+  if (index === 0 || index === keys.length - 1 || keys[index].still) return 0;
   const prev = keys[index - 1];
   const next = keys[index + 1];
   return (next[which][axis] - prev[which][axis]) / (next.t - prev.t);

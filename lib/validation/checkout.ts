@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PROVINCES } from "@/lib/checkout/provinces";
+import { PAYMENT_METHODS } from "@/lib/payments/methods";
 
 export const checkoutSchema = z.object({
   name: z
@@ -40,6 +41,9 @@ export const checkoutSchema = z.object({
     .refine((value) => value === "" || /^\d{5}$/.test(value), "Postal codes have 5 digits"),
   notes: z.string().trim().max(500, "Please keep your note under 500 characters"),
   discountCode: z.string().trim().max(40),
+    paymentMethod: z.enum(PAYMENT_METHODS, {
+    message: "Please choose how you will pay",
+  }),
   saveAddress: z.boolean(),
 });
 

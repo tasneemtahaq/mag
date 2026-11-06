@@ -4,8 +4,14 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { NeutralToneMapping } from "three";
+import { FrostedDoor } from "@/components/gallery-3d/frosted-door";
 import { GalleryLoading } from "@/components/gallery-3d/gallery-loading";
-import { START_FOV } from "@/components/gallery-3d/gallery-layout";
+import {
+  DOOR_END,
+  DOOR_START,
+  START_FOV,
+  smoothstep,
+} from "@/components/gallery-3d/gallery-layout";
 import { GalleryScene } from "@/components/gallery-3d/gallery-scene";
 import { buttonVariants } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site-config";
@@ -16,9 +22,8 @@ import { cn } from "@/lib/utils";
 export default function GalleryExperience({ lite = false }: { lite?: boolean }) {
   const trackRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const introRef = useRef<HTMLDivElement>(null);
+  const doorRef = useRef<HTMLDivElement>(null);
   const outroRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLDivElement>(null);
   // Scroll progress, 0 to 1. A ref (not state), so scrolling never re-renders React.
   const progress = useRef(0);
 
@@ -27,7 +32,7 @@ export default function GalleryExperience({ lite = false }: { lite?: boolean }) 
   const [contextLost, setContextLost] = useState(false);
   const handleReady = useCallback(() => setReady(true), []);
 
-  // Turn the scroll position into a 0-to-1 progress value
+  // Turn the scroll position into a 0-to-1 progress value, and slide the door
   useEffect(() => {
     const track = trackRef.current;
     const stage = stageRef.current;
@@ -40,10 +45,14 @@ export default function GalleryExperience({ lite = false }: { lite?: boolean }) 
       const p = Math.min(Math.max(raw, 0), 1);
       progress.current = p;
 
-      // The title fades out as the doors begin to open
-      if (introRef.current) {
-        introRef.current.style.opacity = String(1 - Math.min(p / 0.1, 1));
+      // The frosted door (with its heading) slides to the right, like a sliding door
+      const door = doorRef.current;
+      if (door) {
+        const open = smoothstep(DOOR_START, DOOR_END, p);
+        door.style.transform = `translate3d(${(open * 104).toFixed(2)}%, 0, 0)`;
+        door.style.visibility = open >= 1 ? "hidden" : "visible";
       }
+
       // The closing call-to-action fades in at the very end
       if (outroRef.current) {
         const o = Math.min(Math.max((p - 0.9) / 0.1, 0), 1);
@@ -82,15 +91,17 @@ export default function GalleryExperience({ lite = false }: { lite?: boolean }) 
       aria-label="Gallery tour"
       className={cn("relative", lite ? "h-[420svh]" : "h-[500svh]")}
     >
-      {/* The stage has a pastel sky; the 3D canvas is transparent on top of it */}
       <div
         ref={stageRef}
-        className="sticky top-16 h-[calc(100svh-4rem)] overflow-hidden bg-linear-to-b from-[#bcd9ee] via-[#f4dde8] to-[#fbeee0] lg:top-20 lg:h-[calc(100svh-5rem)]"
+        className="sticky top-16 h-[calc(100svh-4rem)] overflow-hidden bg-[#2b130c] lg:top-20 lg:h-[calc(100svh-5rem)]"
       >
+        {/* The page's one main heading, for screen readers and search engines */}
+        <h1 className="sr-only">{siteConfig.hero.title}</h1>
+
         {/* The 3D canvas */}
         <div
           role="img"
-          aria-label="An animated 3D tour: a pastel graffiti wall, its doors opening onto a white contemporary art gallery"
+          aria-label="An animated 3D tour: a frosted glass door slides open onto a long terracotta art gallery lit by track lighting"
           className="absolute inset-0"
         >
           <Canvas
@@ -98,12 +109,12 @@ export default function GalleryExperience({ lite = false }: { lite?: boolean }) 
             dpr={lite ? [1, 1.25] : [1, 1.5]}
             // Lets a finger scroll the page when it starts on the canvas
             style={{ touchAction: "pan-y" }}
-            camera={{ fov: START_FOV, near: 0.1, far: 150, position: [0, 1.7, 15] }}
+            camera={{ fov: START_FOV, near: 0.1, far: 150, position: [0, 1.65, 4.5] }}
             gl={{
               antialias: true,
               alpha: true,
               powerPreference: "high-performance",
-              // Keeps your artwork's colors true instead of washing them out
+              // Keeps colours true instead of washing them out
               toneMapping: NeutralToneMapping,
             }}
             onCreated={({ gl }) => {
@@ -120,43 +131,25 @@ export default function GalleryExperience({ lite = false }: { lite?: boolean }) 
             <GalleryScene
               progress={progress}
               onReady={handleReady}
-              titleRef={titleRef}
               lite={lite}
             />
           </Canvas>
         </div>
 
-        {/* Title above the door (fades out as the doors open) */}
-        <div
-          ref={introRef}
-          className="pointer-events-none absolute inset-0 z-10"
-        >
-          {/* This block is pinned to the wall above the door, in 3D space */}
-          <div
-            ref={titleRef}
-            className="absolute inset-x-0 top-[31%] -translate-y-1/2 px-4 text-center"
-          >
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-ink/80">
-              {siteConfig.hero.eyebrow}
-            </p>
-            <h1 className="whitespace-nowrap font-display text-[clamp(1.5rem,6.4vw,4.75rem)] font-bold leading-none tracking-tight text-ink [text-shadow:0_2px_24px_rgba(255,255,255,0.9)]">
-              {siteConfig.hero.title}
-            </h1>
-          </div>
-          <div
-            aria-hidden
-            className="absolute inset-x-0 bottom-8 flex flex-col items-center gap-3 text-[0.65rem] uppercase tracking-[0.3em] text-ink/70"
-          >
-            <span>{lite ? "Swipe up to enter" : "Scroll to enter"}</span>
-            <span className="h-12 w-px bg-ink/50" />
-          </div>
-        </div>
+        {/* The frosted door: slides to the right as you scroll */}
+        <FrostedDoor
+          doorRef={doorRef}
+          title={siteConfig.hero.title}
+          eyebrow={siteConfig.hero.eyebrow}
+          description={siteConfig.hero.description}
+          hint={lite ? "Swipe up to open the door" : "Scroll to open the door"}
+        />
 
         {/* Closing call-to-action (fades in at the end) */}
         <div
           ref={outroRef}
           style={{ opacity: 0, visibility: "hidden" }}
-          className="absolute inset-x-0 bottom-0 z-10 flex justify-center bg-linear-to-t from-ink/60 to-transparent px-6 pb-12 pt-32"
+          className="absolute inset-x-0 bottom-0 z-10 flex justify-center bg-linear-to-t from-black/60 to-transparent px-6 pb-12 pt-32"
         >
           <Link href="/shop" className={buttonVariants({ size: "lg" })}>
             Explore the collection

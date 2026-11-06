@@ -32,6 +32,8 @@ export type SavedAddress = {
   postalCode: string | null;
 };
 
+export type PaymentOption = { method: string; label: string };
+
 type Values = {
   name: string;
   email: string;
@@ -86,12 +88,14 @@ export function CheckoutForm({
   signedIn,
   initial,
   addresses,
+  methods,
 }: {
   lines: SummaryLine[];
   subtotal: number;
   signedIn: boolean;
   initial: { name: string; email: string };
   addresses: SavedAddress[];
+  methods: PaymentOption[];
 }) {
   // Start from the customer's default saved address, if there is one
   const first = addresses[0];
@@ -126,6 +130,7 @@ export function CheckoutForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [paymentMethod, setPaymentMethod] = useState(methods[0]?.method ?? "");
 
   // Ask the server for the delivery cost and discount whenever they could change.
   // (The server always works out the real amounts again when the order is placed.)
@@ -202,7 +207,11 @@ export function CheckoutForm({
     setMessage(null);
 
     startTransition(async () => {
-      const result = await placeOrder({ ...values, discountCode: appliedCode });
+           const result = await placeOrder({
+        ...values,
+        discountCode: appliedCode,
+        paymentMethod,
+      });
       // On success the server sends the visitor to the confirmation page
       if (result && !result.ok) {
         setErrors(result.errors ?? {});
@@ -356,16 +365,36 @@ export function CheckoutForm({
           </Field>
         </fieldset>
 
-        <fieldset className="space-y-4">
+                <fieldset className="space-y-4">
           <legend className={legendClass}>Payment</legend>
-          <div className="border border-ink p-4">
-            <p className="text-sm font-medium">Cash on delivery</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Pay when your artwork arrives. The gallery will contact you to
-              confirm your order and arrange delivery. Online payment options
-              are coming soon.
-            </p>
+          <p className="text-sm text-muted-foreground">
+            Choose how you will pay. After you place your order you will see
+            the account details, and you can upload a photo or screenshot of
+            your payment receipt.
+          </p>
+          <div className="space-y-3">
+            {methods.map((option) => (
+              <label
+                key={option.method}
+                className="flex cursor-pointer items-center gap-3 border border-border p-4 text-sm has-[:checked]:border-ink"
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value={option.method}
+                  checked={paymentMethod === option.method}
+                  onChange={() => setPaymentMethod(option.method)}
+                  className="size-4 accent-gold-deep"
+                />
+                <span className="font-medium">{option.label}</span>
+              </label>
+            ))}
           </div>
+          {errors.paymentMethod && (
+            <p role="alert" className="text-sm text-destructive">
+              {errors.paymentMethod}
+            </p>
+          )}
         </fieldset>
       </div>
 
@@ -491,7 +520,8 @@ export function CheckoutForm({
             {pending ? "Placing your order…" : "Place order"}
           </Button>
           <p className="text-center text-xs text-muted-foreground">
-            You pay on delivery. You can&rsquo;t be charged online.
+                       Nothing is charged online. You pay by transfer after placing your
+            order.
           </p>
         </div>
       </aside>

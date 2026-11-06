@@ -1,12 +1,19 @@
 import { useLoader } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
-import { CanvasTexture, SRGBColorSpace, TextureLoader } from "three";
+import {
+  AdditiveBlending,
+  CanvasTexture,
+  SRGBColorSpace,
+  TextureLoader,
+} from "three";
 import type { SpotLight, Texture } from "three";
 import {
   BACK_Z,
   HALF_WIDTH,
   HERO_CENTER_Y,
   HERO_MAX_SIZE,
+  RAIL_X,
+  RAIL_Y,
   SIDE_CENTER_Y,
   SIDE_MAX_SIZE,
   SIDE_Z,
@@ -22,7 +29,7 @@ import {
 } from "@/components/gallery-3d/texture-utils";
 import { galleryArtworks } from "@/lib/gallery-artworks.generated";
 
-// ---------- A soft shadow texture, shared by every frame ----------
+// ---------- Soft textures, shared by every frame ----------
 let shadowTexture: CanvasTexture | null = null;
 
 function getShadowTexture() {
@@ -41,6 +48,35 @@ function getShadowTexture() {
   }
   shadowTexture = new CanvasTexture(canvas);
   return shadowTexture;
+}
+
+// A soft round glow: the pool of light a spotlight leaves on the wall
+let glowTexture: CanvasTexture | null = null;
+
+function getGlowTexture() {
+  if (glowTexture) return glowTexture;
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const gradient = ctx.createRadialGradient(
+      size / 2,
+      size / 2,
+      0,
+      size / 2,
+      size / 2,
+      size / 2,
+    );
+    gradient.addColorStop(0, "rgba(255,255,255,0.9)");
+    gradient.addColorStop(0.5, "rgba(255,255,255,0.25)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+  }
+  glowTexture = new CanvasTexture(canvas);
+  return glowTexture;
 }
 
 // ---------- Placeholder paintings (used until you add your own images) ----------
@@ -110,11 +146,28 @@ function FramedArtwork({
   rotationY?: number;
 }) {
   const shadow = useMemo(() => getShadowTexture(), []);
+  const glow = useMemo(() => getGlowTexture(), []);
   const frameWidth = width + 0.14;
   const frameHeight = height + 0.14;
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
+      {/* The warm pool of light the track spotlight leaves on the wall */}
+      <mesh position={[0, 0.25, 0.003]}>
+        <planeGeometry args={[frameWidth * 2.1, frameHeight * 1.9]} />
+        <meshBasicMaterial
+          map={glow}
+          color="#ffd9a0"
+          transparent
+          opacity={0.3}
+          blending={AdditiveBlending}
+          depthWrite={false}
+          polygonOffset
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-1}
+          toneMapped={false}
+        />
+      </mesh>
       {/* Soft shadow on the wall behind the frame */}
       <mesh position={[0, -0.12, 0.004]}>
         <planeGeometry args={[frameWidth / 0.6, frameHeight / 0.6]} />
@@ -143,8 +196,8 @@ function FramedArtwork({
   );
 }
 
-// A ceiling spotlight aimed at one artwork
-function ArtSpot({
+// A spotlight aimed at one point
+export function ArtSpot({
   position,
   target,
   intensity,
@@ -204,10 +257,10 @@ function SideArtwork({
       />
       {showSpot && (
         <ArtSpot
-          position={[side * (HALF_WIDTH - 2.4), 5.8, z]}
+          position={[side * RAIL_X, RAIL_Y - 0.2, z]}
           target={[side * HALF_WIDTH, SIDE_CENTER_Y, z]}
-          intensity={120}
-          angle={0.45}
+          intensity={150}
+          angle={0.4}
         />
       )}
     </>
@@ -232,17 +285,18 @@ function HeroArtwork({
         position={[0, HERO_CENTER_Y, BACK_Z]}
       />
       <ArtSpot
-        position={[0, 5.8, BACK_Z + 6]}
+        position={[0, RAIL_Y, BACK_Z + 5]}
         target={[0, HERO_CENTER_Y, BACK_Z]}
-        intensity={300}
-        angle={0.6}
+        intensity={260}
+        angle={0.55}
       />
     </>
   );
 }
 
-// On phones only the first two pairs of paintings get their own spotlight
-const hasSpot = (lite: boolean, index: number) => !lite || index < 2;
+// Only the first few pairs of paintings get a real spotlight. The others get
+// a painted-on pool of light, which looks the same and costs far less.
+const hasSpot = (lite: boolean, index: number) => index < (lite ? 1 : 3);
 
 // ---------- Your images ----------
 function ImageArtworks({
@@ -314,7 +368,7 @@ function PlaceholderArtworks({ lite }: { lite: boolean }) {
 
   return (
     <>
-      <HeroArtwork texture={textures[0]} width={6} height={4} />
+      <HeroArtwork texture={textures[0]} width={5.2} height={3.5} />
       {SIDE_Z.map((z, i) =>
         ([-1, 1] as const).map((side, s) => (
           <SideArtwork

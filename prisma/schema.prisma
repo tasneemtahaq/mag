@@ -399,6 +399,13 @@ model Payment {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
+    // The transaction ID the customer typed (not unique: customers can make mistakes)
+  payerReference     String?
+  receiptSubmittedAt DateTime?
+  verifiedAt         DateTime?
+  rejectionNote      String?
+  receipts           PaymentReceipt[]
+
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   // Stops the same webhook from being processed twice
@@ -499,6 +506,17 @@ model SiteSettings {
   contactAddress        String?
   flatShippingRate      Decimal  @default(0) @db.Decimal(14, 2)
   freeShippingThreshold Decimal? @db.Decimal(14, 2)
+    easypaisaTitle    String?
+  easypaisaNumber   String?
+  jazzcashTitle     String?
+  jazzcashNumber    String?
+  bankName          String?
+  bankAccountTitle  String?
+  bankAccountNumber String?
+  bankIban          String?
+  bankBranch        String?
+  // Extra instructions shown to customers when they pay
+  paymentNote       String?
   updatedAt             DateTime @updatedAt
 }
 // ============================================================
@@ -558,4 +576,19 @@ model RateLimit {
   key         String @unique
   count       Int
   lastRequest BigInt
+}
+// A photo or screenshot of a payment receipt. The image itself is private
+// and lives in Cloudinary. Only its id is kept here.
+model PaymentReceipt {
+  id        String   @id @default(cuid())
+  paymentId String
+  publicId  String   @unique
+  format    String?
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
 }

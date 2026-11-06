@@ -1,6 +1,5 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { ZodError } from "zod";
@@ -12,6 +11,8 @@ import { priceOrder } from "@/lib/checkout/pricing";
 import type { PlaceOrderResult, QuoteResult } from "@/lib/checkout/types";
 import { db } from "@/lib/db/prisma";
 import { checkoutSchema, quoteSchema } from "@/lib/validation/checkout";
+import { getEnabledPaymentMethods } from "@/lib/data/payments";
+import { rememberOrder } from "@/lib/orders/access";
 
 // An expected problem (sold out, bad code...) that we explain to the customer
 class CheckoutError extends Error {}
@@ -141,6 +142,15 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
     };
   }
   const data = parsed.data;
+    // Only a payment method the gallery has set up can be chosen
+  const { methods } = await getEnabledPaymentMethods();
+  if (!methods.some((method) => method.method === data.paymentMethod)) {
+    return {
+      ok: false,
+      message: "That payment method isn't available. Please choose another.",
+      errors: { paymentMethod: "Please choose how you will pay" },
+    };
+  }
 
   const session = await getSession();
   const cart = await findCart({ create: false, writable: true });
@@ -241,10 +251,10 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
                 lineTotal: line.unitPrice.mul(line.quantity),
               })),
             },
-            // Cash on delivery: paid when the artwork arrives
+            // Waits for the customer's transfer and receipt
             payments: {
               create: {
-                provider: "cod",
+                provider: data.paymentMethod,
                 status: "PENDING",
                 amount: priced.total,
               },
@@ -312,14 +322,8 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
     };
   }
 
-  // Lets this browser (and only this browser) view the confirmation page
-  (await cookies()).set("mag_last_order", orderId, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/checkout",
-    maxAge: 60 * 60 * 2,
-  });
+    // Lets this browser (and only this browser) open the order page again
+  await rememberOrder(orderId);
 
   // Stock changed, so product pages and the shop must be rebuilt
   revalidatePath("/", "layout");

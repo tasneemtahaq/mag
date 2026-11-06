@@ -1,6 +1,5 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
-import type { RefObject } from "react";
 import { MathUtils, Vector3 } from "three";
 import type { PerspectiveCamera } from "three";
 import {
@@ -8,7 +7,6 @@ import {
   END_FOV,
   HERO_FILL,
   START_FOV,
-  TITLE_ANCHOR,
   buildCameraKeys,
   sampleKeys,
   smoothstep,
@@ -21,24 +19,15 @@ import type {
 export function CameraRig({
   smoothRef,
   heroSizeRef,
-  titleRef,
 }: {
   smoothRef: ProgressRef;
   heroSizeRef: HeroSizeRef;
-  titleRef: RefObject<HTMLElement | null>;
 }) {
-  // The path keys change every frame (the stopping distance and the starting
-  // distance depend on the screen shape), so they live in a ref
-    const keysRef = useRef(buildCameraKeys());
-  // The original starting distances, taken from a fresh copy of the path
-    const startZ = useRef(
-    buildCameraKeys()
-      .slice(0, 2)
-      .map((key) => key.position[2]),
-  );
+  // The path keys change every frame (the stopping distance depends on the
+  // screen shape), so they live in a ref
+  const keysRef = useRef(buildCameraKeys());
   const position = useRef(new Vector3());
   const look = useRef(new Vector3());
-  const anchor = useRef(new Vector3());
   const parallax = useRef({ x: 0, y: 0 });
   const lastT = useRef(0);
   const walk = useRef(0); // 0 = standing still, 1 = walking
@@ -48,14 +37,12 @@ export function CameraRig({
     const keys = keysRef.current;
     const t = MathUtils.clamp(smoothRef.current, 0, 1);
 
-    // Tall, narrow screens (phones held upright): use a wider lens and
-    // start further back, so the whole facade and doors are visible
+    // Tall, narrow screens (phones held upright): use a wider lens so the
+    // corridor still fits
     const portrait = camera.aspect < 1 ? 1 - camera.aspect : 0;
     const lensBoost = 1 + portrait * 0.9;
     const startFov = START_FOV * lensBoost;
     const endFov = END_FOV * lensBoost;
-    keys[0].position[2] = startZ.current[0] + portrait * 14;
-    keys[1].position[2] = startZ.current[1] + portrait * 14;
 
     // How far from the masterpiece to stop so that it fills the screen
     const tanHalf = Math.tan(MathUtils.degToRad(endFov / 2));
@@ -91,7 +78,7 @@ export function CameraRig({
     const sway = Math.sin(time * 3.75) * 0.01 * walk.current * calm;
     const breathe = Math.sin(time * 0.9) * 0.004 * calm;
 
-    // Very subtle mouse parallax (on phones the pointer stays centred)
+    // Very subtle mouse parallax
     parallax.current.x = MathUtils.damp(parallax.current.x, state.pointer.x, 3, delta);
     parallax.current.y = MathUtils.damp(parallax.current.y, state.pointer.y, 3, delta);
 
@@ -107,15 +94,6 @@ export function CameraRig({
     if (Math.abs(camera.fov - fov) > 0.01) {
       camera.fov = fov;
       camera.updateProjectionMatrix();
-    }
-
-    // Keep the title pinned to the wall above the door: work out where that
-    // spot in 3D space lands on the screen, and move the title there
-    const title = titleRef.current;
-    if (title) {
-      camera.updateMatrixWorld();
-      anchor.current.set(...TITLE_ANCHOR).project(camera);
-      title.style.top = `${((1 - anchor.current.y) / 2) * 100}%`;
     }
   });
 
