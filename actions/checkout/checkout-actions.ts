@@ -36,6 +36,11 @@ async function loadLines(client: Prisma.TransactionClient, cartId: string) {
           stock: true,
           isActive: true,
           deletedAt: true,
+          widthCm: true,
+          heightCm: true,
+          depthCm: true,
+          // Used when a variant has no size of its own
+          size: { select: { widthCm: true, heightCm: true, depthCm: true } },
           product: {
             select: {
               name: true,
@@ -64,6 +69,9 @@ async function loadLines(client: Prisma.TransactionClient, cartId: string) {
       sku: variant.sku,
       imageUrl: product.images[0]?.url ?? null,
       unitPrice: variant.salePrice ?? variant.price,
+      widthCm: variant.widthCm ?? variant.size?.widthCm ?? null,
+      heightCm: variant.heightCm ?? variant.size?.heightCm ?? null,
+      depthCm: variant.depthCm ?? variant.size?.depthCm ?? null,
       quantity: item.quantity,
       stock: variant.stock,
       // The same rule customers see in the shop

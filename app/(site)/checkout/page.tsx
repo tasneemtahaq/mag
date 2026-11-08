@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-function NotOpen({ text }: { text: string }) {
+function NotOpen({ text, hint }: { text: string; hint: string }) {
   return (
     <Container size="narrow" className="py-20 sm:py-28">
       <SectionHeading
@@ -36,6 +36,12 @@ function NotOpen({ text }: { text: string }) {
           Continue browsing
         </Link>
       </div>
+      {/* Only you see this, and only while developing on your own computer */}
+      {process.env.NODE_ENV === "development" && (
+        <p className="mt-10 border border-dashed border-border p-4 text-xs text-muted-foreground">
+          Developer note: {hint}
+        </p>
+      )}
     </Container>
   );
 }
@@ -43,14 +49,20 @@ function NotOpen({ text }: { text: string }) {
 export default async function CheckoutPage() {
   if (!isCheckoutEnabled()) {
     return (
-      <NotOpen text="Online ordering isn't open yet. If you would like to enquire about an artwork, please contact the gallery." />
+      <NotOpen
+        text="Online ordering isn't open yet. If you would like to enquire about an artwork, please contact the gallery."
+        hint='The safety switch is off. Add CHECKOUT_ENABLED="true" to .env.local and restart the dev server (on the live site, add it in Vercel and redeploy).'
+      />
     );
   }
 
   const { methods } = await getEnabledPaymentMethods();
   if (methods.length === 0) {
     return (
-      <NotOpen text="Online ordering is almost ready. If you would like to enquire about an artwork, please contact the gallery." />
+      <NotOpen
+        text="Online ordering is almost ready. If you would like to enquire about an artwork, please contact the gallery."
+        hint="No payment method is switched on. Fill in an account's details at /admin/payments and save."
+      />
     );
   }
 

@@ -1,10 +1,25 @@
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
+import {
+  cmToInches,
+  deliveryForItem,
+  isRawalpindi,
+  sizeShippingFrom,
+} from "@/lib/checkout/delivery";
 import { formatPrice } from "@/lib/format";
 
 type Client = Prisma.TransactionClient;
 type Money = Prisma.Decimal;
 const Decimal = Prisma.Decimal;
+
+export type PricedLine = {
+  unitPrice: Money;
+  quantity: number;
+  // The artwork's size, used to work out its delivery cost
+  heightCm?: Money | null;
+  widthCm?: Money | null;
+  depthCm?: Money | null;
+};
 
 export type PricedOrder = {
   subtotal: Money;
@@ -28,7 +43,7 @@ const normalise = (value: string | null | undefined) =>
 export async function priceOrder(
   client: Client,
   input: {
-    lines: { unitPrice: Money; quantity: number }[];
+    lines: PricedLine[];
     province: string;
     city: string;
     discountCode: string;
@@ -97,9 +112,11 @@ export async function priceOrder(
     }),
   ]);
 
+  const threshold = settings?.freeShippingThreshold ?? null;
   const city = normalise(input.city);
-  // The most specific rule wins: city, then province, then a general rule
-  const rule =
+
+  // A special rule for a city or a province overrides the normal pricing
+  const special =
     rules.find(
       (item) =>
         item.city &&
@@ -109,13 +126,41 @@ export async function priceOrder(
     rules.find(
       (item) =>
         !item.city && item.province && normalise(item.province) === province,
-    ) ??
-    rules.find((item) => !item.city && !item.province);
+    );
 
-  const rate = rule ? rule.rate : (settings?.flatShippingRate ?? new Decimal(0));
-  const freeAbove = rule
-    ? (rule.freeAbove ?? settings?.freeShippingThreshold ?? null)
-    : (settings?.freeShippingThreshold ?? null);
+  let rate: Money;
+  let label: string;
+  let freeAbove: Money | null;
+
+  if (special) {
+    rate = special.rate;
+    label = special.name;
+    freeAbove = special.freeAbove ?? threshold;
+  } else if (isRawalpindi(input.city)) {
+    rate = settings?.localDeliveryRate ?? new Decimal(0);
+    label = "Rawalpindi delivery";
+    freeAbove = threshold;
+  } else {
+    // Delivery by frame size: every artwork is its own parcel
+    const sizeSettings = sizeShippingFrom(settings);
+    rate = input.lines.reduce(
+      (sum, line) =>
+        sum.plus(
+          deliveryForItem(
+            {
+              heightIn: cmToInches(line.heightCm),
+              widthIn: cmToInches(line.widthCm),
+              thicknessIn: cmToInches(line.depthCm),
+            },
+            sizeSettings,
+          ).mul(line.quantity),
+        ),
+      new Decimal(0),
+    );
+    const pieces = input.lines.reduce((sum, line) => sum + line.quantity, 0);
+    label = `Delivery by frame size (${pieces} ${pieces === 1 ? "artwork" : "artworks"})`;
+    freeAbove = threshold;
+  }
 
   const free = freeAbove !== null && merchandise.gte(freeAbove);
   const shippingCost = free ? new Decimal(0) : rate;
@@ -125,11 +170,7 @@ export async function priceOrder(
     discount,
     discountError,
     shippingCost,
-    shippingLabel: free
-      ? "Free delivery"
-      : rule
-        ? rule.name
-        : "Standard delivery",
+    shippingLabel: free ? "Free delivery" : label,
     total: merchandise.plus(shippingCost),
   };
 }

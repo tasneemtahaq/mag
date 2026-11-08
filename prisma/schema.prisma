@@ -517,6 +517,15 @@ model SiteSettings {
   bankBranch        String?
   // Extra instructions shown to customers when they pay
   paymentNote       String?
+    // Delivery by size: a reference package, and what it costs to send anywhere in Pakistan
+  shipRefHeightIn    Decimal @default(36) @db.Decimal(8, 2)
+  shipRefWidthIn     Decimal @default(24) @db.Decimal(8, 2)
+  shipRefThicknessIn Decimal @default(3) @db.Decimal(8, 2)
+  shipRefPrice       Decimal @default(1500) @db.Decimal(14, 2)
+  // The least charged for one artwork, however small
+  shipMinPerItem     Decimal @default(0) @db.Decimal(14, 2)
+  // Delivery inside Rawalpindi
+  localDeliveryRate  Decimal @default(0) @db.Decimal(14, 2)
   updatedAt             DateTime @updatedAt
 }
 // ============================================================
