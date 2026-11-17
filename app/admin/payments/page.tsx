@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { savePaymentSettings } from "@/actions/catalog/payment-settings-actions";
+import {
+  savePaymentSettings,
+  setCheckoutOpen,
+} from "@/actions/catalog/payment-settings-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,9 +127,11 @@ export default async function AdminPaymentsPage({ searchParams }: Props) {
         order page and approve it.
       </p>
 
-      {notice === "saved" && (
+            {notice && (
         <p role="status" className="mt-6 border border-border bg-muted px-4 py-3 text-sm">
-          Payment details saved.
+          {notice === "saved" && "Payment details saved."}
+          {notice === "opened" && "Online ordering is now open. Customers can check out."}
+          {notice === "closed" && "Online ordering is now closed."}
         </p>
       )}
       {error === "invalid" && (
@@ -138,6 +143,49 @@ export default async function AdminPaymentsPage({ searchParams }: Props) {
           spaces and hyphens, and each box has a length limit.
         </p>
       )}
+      {error === "no-method" && (
+        <p
+          role="alert"
+          className="mt-6 border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          Ordering can&rsquo;t open yet, because no payment method is switched
+          on. Fill in an account&rsquo;s details below, save them, then try
+          again.
+        </p>
+      )}
+
+      <section
+        aria-labelledby="ordering"
+        className="mt-10 space-y-4 border border-border p-4"
+      >
+        <h2 id="ordering" className="font-display text-2xl font-light">
+          Online ordering{" "}
+          <Badge variant={settings?.checkoutOpen ? "secondary" : "outline"}>
+            {settings?.checkoutOpen ? "Open" : "Closed"}
+          </Badge>
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {settings?.checkoutOpen
+            ? "Customers can check out right now."
+            : "Customers see \u201cCheckout opens soon\u201d. Open ordering once your payment details are saved and you are ready to receive orders."}
+          {!on.easypaisa && !on.jazzcash && !on.bank
+            ? " No payment method is switched on yet, so fill one in below first."
+            : ""}
+        </p>
+        <form action={setCheckoutOpen}>
+          <input
+            type="hidden"
+            name="open"
+            value={String(!settings?.checkoutOpen)}
+          />
+          <Button
+            type="submit"
+            variant={settings?.checkoutOpen ? "outline" : "default"}
+          >
+            {settings?.checkoutOpen ? "Close ordering" : "Open ordering"}
+          </Button>
+        </form>
+      </section>
 
       <OrderList
         title="Receipts to check"

@@ -10,10 +10,10 @@ import { CartSync } from "@/components/cart/cart-sync";
 import { Container } from "@/components/layout/container";
 import { SectionHeading } from "@/components/layout/section-heading";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { isCheckoutEnabled } from "@/lib/checkout/enabled";
 import { getCartView } from "@/lib/data/cart";
 import type { CartLine } from "@/lib/data/cart";
 import { formatPrice } from "@/lib/format";
-import { isCheckoutEnabled } from "@/lib/checkout/enabled";
 
 export const metadata: Metadata = {
   title: "Cart",
@@ -38,7 +38,7 @@ function issueText(line: CartLine) {
 
 export default async function CartPage() {
   const cart = await getCartView();
-  const checkoutOpen = isCheckoutEnabled();
+  const checkoutOpen = await isCheckoutEnabled();
 
   if (cart.lines.length === 0) {
     return (
@@ -198,7 +198,7 @@ export default async function CartPage() {
               </p>
             )}
 
-                        <div className="mt-6 space-y-3">
+            <div className="mt-6 space-y-3">
               {checkoutOpen && !cart.hasIssues ? (
                 <Link
                   href="/checkout"
@@ -217,7 +217,7 @@ export default async function CartPage() {
                 </p>
               )}
             </div>
-            </div>
+          </div>
 
           <p className="mt-6 text-sm text-muted-foreground">
             <Link href="/shop" className="underline underline-offset-4">

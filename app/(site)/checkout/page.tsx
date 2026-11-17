@@ -16,7 +16,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-function NotOpen({ text, hint }: { text: string; hint: string }) {
+function NotOpen({
+  text,
+  reasons,
+}: {
+  text: string;
+  // Only passed for admins
+  reasons: string[] | null;
+}) {
   return (
     <Container size="narrow" className="py-20 sm:py-28">
       <SectionHeading
@@ -36,32 +43,52 @@ function NotOpen({ text, hint }: { text: string; hint: string }) {
           Continue browsing
         </Link>
       </div>
-      {/* Only you see this, and only while developing on your own computer */}
-      {process.env.NODE_ENV === "development" && (
-        <p className="mt-10 border border-dashed border-border p-4 text-xs text-muted-foreground">
-          Developer note: {hint}
-        </p>
+
+      {reasons && (
+        <div className="mt-12 space-y-3 border border-dashed border-border p-5 text-sm">
+          <p className="font-medium">Why is checkout closed? (only admins see this)</p>
+          <ul className="list-inside list-disc space-y-1 text-muted-foreground">
+            {reasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+          <Link
+            href="/admin/payments"
+            className="inline-block underline underline-offset-4"
+          >
+            Go to the Payments page
+          </Link>
+        </div>
       )}
     </Container>
   );
 }
 
 export default async function CheckoutPage() {
-  if (!isCheckoutEnabled()) {
-    return (
-      <NotOpen
-        text="Online ordering isn't open yet. If you would like to enquire about an artwork, please contact the gallery."
-        hint='The safety switch is off. Add CHECKOUT_ENABLED="true" to .env.local and restart the dev server (on the live site, add it in Vercel and redeploy).'
-      />
-    );
-  }
+  const session = await getSession();
+  const isAdmin = session?.user.role === "ADMIN";
 
+  const open = await isCheckoutEnabled();
   const { methods } = await getEnabledPaymentMethods();
-  if (methods.length === 0) {
+
+  if (!open || methods.length === 0) {
+    const reasons = [
+      open
+        ? "Online ordering is switched on."
+        : "Online ordering is switched OFF. Press \u201cOpen ordering\u201d on the Payments page.",
+      methods.length > 0
+        ? `Payment methods that are on: ${methods.map((method) => method.label).join(", ")}.`
+        : "No payment method is switched on. Fill in an account's details on the Payments page and save.",
+    ];
+
     return (
       <NotOpen
-        text="Online ordering is almost ready. If you would like to enquire about an artwork, please contact the gallery."
-        hint="No payment method is switched on. Fill in an account's details at /admin/payments and save."
+        text={
+          open
+            ? "Online ordering is almost ready. If you would like to enquire about an artwork, please contact the gallery."
+            : "Online ordering isn't open yet. If you would like to enquire about an artwork, please contact the gallery."
+        }
+        reasons={isAdmin ? reasons : null}
       />
     );
   }
@@ -70,7 +97,6 @@ export default async function CheckoutPage() {
   // Nothing to buy, or something in the cart needs fixing first
   if (cart.lines.length === 0 || cart.hasIssues) redirect("/cart");
 
-  const session = await getSession();
   const addresses = session
     ? await db.address.findMany({
         where: { userId: session.user.id },

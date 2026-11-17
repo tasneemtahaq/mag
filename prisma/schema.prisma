@@ -526,6 +526,8 @@ model SiteSettings {
   shipMinPerItem     Decimal @default(0) @db.Decimal(14, 2)
   // Delivery inside Rawalpindi
   localDeliveryRate  Decimal @default(0) @db.Decimal(14, 2)
+    // Online ordering is opened and closed from the admin (Payments page)
+  checkoutOpen Boolean @default(false)
   updatedAt             DateTime @updatedAt
 }
 // ============================================================

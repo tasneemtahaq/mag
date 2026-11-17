@@ -5,6 +5,7 @@
 export const siteConfig = {
   name: "Muhammadi Art Gallery",
   tagline: "Original art, prints and heritage crafts from Pakistan.",
+    poweredBy: "Rubiks Solutions",
     hero: {
     eyebrow: "Online Gallery",
     title: "Muhammadi Art Gallery",

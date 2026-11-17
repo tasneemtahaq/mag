@@ -122,10 +122,16 @@ export async function SiteFooter() {
 
         {/* Bottom bar */}
         <div className="mt-16 flex flex-col gap-4 border-t border-ivory/15 pt-8 text-sm text-ivory/60 sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            &copy; {new Date().getFullYear()} {siteConfig.name}. All rights
-            reserved.
-          </p>
+          <div className="space-y-1">
+            <p>
+              &copy; {new Date().getFullYear()} {siteConfig.name}. All rights
+              reserved.
+            </p>
+            <p>
+              Powered by:{" "}
+              <span className="text-ivory/85">{siteConfig.poweredBy}</span>
+            </p>
+          </div>
           <nav aria-label="Legal">
             <ul className="flex flex-wrap gap-x-6 gap-y-2">
               {footerNav.legal.map((item) => (

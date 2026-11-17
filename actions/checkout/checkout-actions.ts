@@ -97,7 +97,7 @@ function fieldErrors(error: ZodError) {
 
 // ---------- The live preview of delivery, discount and total ----------
 export async function quoteCheckout(input: unknown): Promise<QuoteResult> {
-  if (!isCheckoutEnabled()) return { ok: false, message: CLOSED };
+    if (!(await isCheckoutEnabled())) return { ok: false, message: CLOSED };
 
   const parsed = quoteSchema.safeParse(input);
   if (!parsed.success) {
@@ -139,7 +139,7 @@ export async function quoteCheckout(input: unknown): Promise<QuoteResult> {
 
 // ---------- Turning the cart into an order ----------
 export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
-  if (!isCheckoutEnabled()) return { ok: false, message: CLOSED };
+    if (!(await isCheckoutEnabled())) return { ok: false, message: CLOSED };
 
   const parsed = checkoutSchema.safeParse(input);
   if (!parsed.success) {
