@@ -6,11 +6,13 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { db } from "@/lib/db/prisma";
 import { slugify } from "@/lib/slugify";
+import { cmFromInches } from "@/lib/units";
 
+// What the admin types is in inches
 const dimension = z
   .string()
   .trim()
-  .refine((v) => v === "" || /^\d{1,4}(\.\d{1,2})?$/.test(v));
+  .refine((v) => v === "" || /^\d{1,3}(\.\d{1,2})?$/.test(v));
 
 const sizeSchema = z.object({
   name: z.string().trim().min(1).max(60),
@@ -32,8 +34,6 @@ function readSize(formData: FormData) {
     sortOrder: read(formData, "sortOrder") || "0",
   });
 }
-
-const toDecimal = (value: string) => (value === "" ? null : value);
 
 // Goes back to the sizes page, optionally with an error code for the banner
 function finish(error?: string): never {
@@ -61,9 +61,9 @@ export async function createSize(formData: FormData) {
     data: {
       name: data.name,
       slug,
-      widthCm: toDecimal(data.widthCm),
-      heightCm: toDecimal(data.heightCm),
-      depthCm: toDecimal(data.depthCm),
+      widthCm: cmFromInches(data.widthCm),
+      heightCm: cmFromInches(data.heightCm),
+      depthCm: cmFromInches(data.depthCm),
       sortOrder: Number(data.sortOrder),
     },
   });
@@ -82,9 +82,9 @@ export async function updateSize(formData: FormData) {
     where: { id },
     data: {
       name: data.name,
-      widthCm: toDecimal(data.widthCm),
-      heightCm: toDecimal(data.heightCm),
-      depthCm: toDecimal(data.depthCm),
+      widthCm: cmFromInches(data.widthCm),
+      heightCm: cmFromInches(data.heightCm),
+      depthCm: cmFromInches(data.depthCm),
       sortOrder: Number(data.sortOrder),
       isActive: formData.get("isActive") === "on",
     },

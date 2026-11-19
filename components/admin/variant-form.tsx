@@ -137,10 +137,14 @@ export function VariantForm({
         />
       </div>
 
+      <p className="-mb-2 text-xs text-muted-foreground">
+        Sizes are in inches, and they set the delivery cost as per dimensions
+      </p>
+
       <div className="grid gap-6 sm:grid-cols-4">
-        <Field {...shared} name="widthCm" label="Width (cm)" inputMode="decimal" />
-        <Field {...shared} name="heightCm" label="Height (cm)" inputMode="decimal" />
-        <Field {...shared} name="depthCm" label="Depth (cm)" inputMode="decimal" />
+        <Field {...shared} name="widthCm" label="Width (in)" inputMode="decimal" />
+        <Field {...shared} name="heightCm" label="Height (in)" inputMode="decimal" />
+        <Field {...shared} name="depthCm" label="Depth / frame thickness (in)" inputMode="decimal" />
         <Field {...shared} name="weightGrams" label="Weight (g)" inputMode="numeric" />
       </div>
 

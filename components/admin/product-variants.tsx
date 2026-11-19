@@ -7,6 +7,7 @@ import { VariantForm } from "@/components/admin/variant-form";
 import type { SizeOption } from "@/components/admin/variant-form";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/format";
+import { inchesFromCm } from "@/lib/units";
 
 type DecimalLike = { toString(): string; toNumber(): number };
 
@@ -61,9 +62,9 @@ export function ProductVariants({
                 price: variant.price.toString(),
                 salePrice: variant.salePrice?.toString() ?? "",
                 stock: String(variant.stock),
-                widthCm: variant.widthCm?.toString() ?? "",
-                heightCm: variant.heightCm?.toString() ?? "",
-                depthCm: variant.depthCm?.toString() ?? "",
+                widthCm: inchesFromCm(variant.widthCm),
+                heightCm: inchesFromCm(variant.heightCm),
+                depthCm: inchesFromCm(variant.depthCm),
                 weightGrams: variant.weightGrams?.toString() ?? "",
                 isActive: variant.isActive,
               }}

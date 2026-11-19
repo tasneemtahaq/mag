@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAdminSizes } from "@/lib/data/admin-catalog";
+import { inchesFromCm } from "@/lib/units";
+
 
 export const metadata: Metadata = { title: "Sizes" };
 
 const errorMessages: Record<string, string> = {
-  invalid:
-    "Please check the name and the numbers. Sizes are in centimetres, like 60 or 60.5.",
+   invalid:
+    "Please check the name and the numbers. Sizes are in inches, like 24 or 2.5.",
   duplicate: "A size with this name already exists.",
   "in-use":
     "This size is used by one or more variants, so it can't be deleted. Untick Available to hide it instead.",
@@ -46,32 +48,32 @@ function SizeFields({
         />
       </div>
       <div>
-        <Label htmlFor={`${prefix}-w`}>Width (cm)</Label>
+        <Label htmlFor={`${prefix}-w`}>Width (in)</Label>
         <Input
           id={`${prefix}-w`}
           name="widthCm"
           inputMode="decimal"
-          defaultValue={size?.widthCm?.toString() ?? ""}
+          defaultValue={inchesFromCm(size?.widthCm)}
           className="mt-2"
         />
       </div>
       <div>
-        <Label htmlFor={`${prefix}-h`}>Height (cm)</Label>
+        <Label htmlFor={`${prefix}-h`}>Height (in)</Label>
         <Input
           id={`${prefix}-h`}
           name="heightCm"
           inputMode="decimal"
-          defaultValue={size?.heightCm?.toString() ?? ""}
+          defaultValue={inchesFromCm(size?.heightCm)}
           className="mt-2"
         />
       </div>
       <div>
-        <Label htmlFor={`${prefix}-d`}>Depth (cm)</Label>
+        <Label htmlFor={`${prefix}-d`}>Depth (in)</Label>
         <Input
           id={`${prefix}-d`}
           name="depthCm"
           inputMode="decimal"
-          defaultValue={size?.depthCm?.toString() ?? ""}
+         defaultValue={inchesFromCm(size?.depthCm)}
           className="mt-2"
         />
       </div>

@@ -128,6 +128,25 @@ export async function priceOrder(
         !item.city && item.province && normalise(item.province) === province,
     );
 
+  // What the courier charges for these artworks outside Rawalpindi.
+  // Every artwork is its own parcel, so the costs add up.
+  const sizeSettings = sizeShippingFrom(settings);
+  const courierRate = input.lines.reduce(
+    (sum, line) =>
+      sum.plus(
+        deliveryForItem(
+          {
+            heightIn: cmToInches(line.heightCm),
+            widthIn: cmToInches(line.widthCm),
+            thicknessIn: cmToInches(line.depthCm),
+          },
+          sizeSettings,
+        ).mul(line.quantity),
+      ),
+    new Decimal(0),
+  );
+  const pieces = input.lines.reduce((sum, line) => sum + line.quantity, 0);
+
   let rate: Money;
   let label: string;
   let freeAbove: Money | null;
@@ -137,28 +156,16 @@ export async function priceOrder(
     label = special.name;
     freeAbove = special.freeAbove ?? threshold;
   } else if (isRawalpindi(input.city)) {
-    rate = settings?.localDeliveryRate ?? new Decimal(0);
-    label = "Rawalpindi delivery";
+    // Inside Rawalpindi: a percentage of the courier rate (50 means half)
+    const percent = settings?.localDeliveryPercent ?? new Decimal(50);
+    rate = courierRate.mul(percent).div(100).ceil();
+    label = percent.eq(50)
+      ? "Rawalpindi delivery (half the courier rate)"
+      : `Rawalpindi delivery (${percent.toNumber()}% of the courier rate)`;
     freeAbove = threshold;
   } else {
-    // Delivery by frame size: every artwork is its own parcel
-    const sizeSettings = sizeShippingFrom(settings);
-    rate = input.lines.reduce(
-      (sum, line) =>
-        sum.plus(
-          deliveryForItem(
-            {
-              heightIn: cmToInches(line.heightCm),
-              widthIn: cmToInches(line.widthCm),
-              thicknessIn: cmToInches(line.depthCm),
-            },
-            sizeSettings,
-          ).mul(line.quantity),
-        ),
-      new Decimal(0),
-    );
-    const pieces = input.lines.reduce((sum, line) => sum + line.quantity, 0);
-    label = `Delivery by frame size (${pieces} ${pieces === 1 ? "artwork" : "artworks"})`;
+    rate = courierRate;
+    label = `Courier by frame size (${pieces} ${pieces === 1 ? "artwork" : "artworks"})`;
     freeAbove = threshold;
   }
 

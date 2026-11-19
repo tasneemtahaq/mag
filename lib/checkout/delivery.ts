@@ -1,12 +1,19 @@
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
+import { CM_PER_INCH } from "@/lib/units";
+
+export { CM_PER_INCH };
 
 const Decimal = Prisma.Decimal;
 type Money = Prisma.Decimal;
 
-export const CM_PER_INCH = 2.54;
 // Delivery prices are rounded UP to the next multiple of this (in rupees)
 export const ROUND_STEP = 50;
+
+// A frame or canvas thinner than your reference frame still needs protective
+// packaging, so it is charged as if it were as thick as the reference.
+// Change this to false to price thin frames by their real thickness.
+export const THIN_FRAMES_PAY_FOR_REFERENCE_THICKNESS = true;
 
 export type SizeShippingSettings = {
   refHeightIn: Money;
@@ -49,7 +56,7 @@ export function cmToInches(cm: Money | null | undefined) {
   return cm && cm.gt(0) ? cm.div(CM_PER_INCH).toDecimalPlaces(2) : null;
 }
 
-// The delivery cost of ONE artwork. A size that is unknown is treated as the
+// The courier cost of ONE artwork. A size that is unknown is treated as the
 // standard package, so an artwork with no size at all costs the reference price.
 export function deliveryForItem(
   size: {
@@ -61,7 +68,10 @@ export function deliveryForItem(
 ): Money {
   const height = size.heightIn ?? settings.refHeightIn;
   const width = size.widthIn ?? settings.refWidthIn;
-  const thickness = size.thicknessIn ?? settings.refThicknessIn;
+  const realThickness = size.thicknessIn ?? settings.refThicknessIn;
+  const thickness = THIN_FRAMES_PAY_FOR_REFERENCE_THICKNESS
+    ? Decimal.max(realThickness, settings.refThicknessIn)
+    : realThickness;
 
   const volume = height.mul(width).mul(thickness);
   const referenceVolume = settings.refHeightIn

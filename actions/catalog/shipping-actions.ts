@@ -20,8 +20,27 @@ function fail(error: string): never {
 
 const toDecimal = (value: string) => (value === "" ? null : value);
 
+// A size in inches: more than 0, up to 3 digits and 2 decimals
+const inches = z
+  .string()
+  .trim()
+  .regex(/^\d{1,3}(\.\d{1,2})?$/)
+  .refine((value) => Number(value) > 0);
+
+// A percentage from 0 to 100
+const percent = z
+  .string()
+  .trim()
+  .regex(/^\d{1,3}(\.\d{1,2})?$/)
+  .refine((value) => Number(value) <= 100);
+
 const settingsSchema = z.object({
-  flatShippingRate: money,
+  shipRefHeightIn: inches,
+  shipRefWidthIn: inches,
+  shipRefThicknessIn: inches,
+  shipRefPrice: money,
+  shipMinPerItem: money,
+  localDeliveryPercent: percent,
   freeShippingThreshold: optionalMoney,
 });
 
@@ -53,23 +72,31 @@ export async function saveShippingSettings(formData: FormData) {
   await requireAdmin();
 
   const parsed = settingsSchema.safeParse({
-    flatShippingRate: read(formData, "flatShippingRate"),
+    shipRefHeightIn: read(formData, "shipRefHeightIn"),
+    shipRefWidthIn: read(formData, "shipRefWidthIn"),
+    shipRefThicknessIn: read(formData, "shipRefThicknessIn"),
+    shipRefPrice: read(formData, "shipRefPrice"),
+    shipMinPerItem: read(formData, "shipMinPerItem") || "0",
+    localDeliveryPercent: read(formData, "localDeliveryPercent") || "50",
     freeShippingThreshold: read(formData, "freeShippingThreshold"),
   });
   if (!parsed.success) fail("invalid-settings");
   const { data } = parsed;
 
+  const values = {
+    shipRefHeightIn: data.shipRefHeightIn,
+    shipRefWidthIn: data.shipRefWidthIn,
+    shipRefThicknessIn: data.shipRefThicknessIn,
+    shipRefPrice: data.shipRefPrice,
+    shipMinPerItem: data.shipMinPerItem,
+    localDeliveryPercent: data.localDeliveryPercent,
+    freeShippingThreshold: toDecimal(data.freeShippingThreshold),
+  };
+
   await db.siteSettings.upsert({
     where: { id: "site" },
-    update: {
-      flatShippingRate: data.flatShippingRate,
-      freeShippingThreshold: toDecimal(data.freeShippingThreshold),
-    },
-    create: {
-      id: "site",
-      flatShippingRate: data.flatShippingRate,
-      freeShippingThreshold: toDecimal(data.freeShippingThreshold),
-    },
+    update: values,
+    create: { id: "site", ...values },
   });
   done("settings-saved");
 }

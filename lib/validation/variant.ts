@@ -1,14 +1,16 @@
 import { z } from "zod";
+import { cmFromInches } from "@/lib/units";
 
 const MONEY = /^\d{1,12}(\.\d{1,2})?$/;
 const MONEY_MESSAGE = "Enter an amount like 85000 or 85000.50";
 
+// What the admin types is in INCHES. It is converted to centimetres when saved.
 const dimension = z
   .string()
   .trim()
   .refine(
-    (v) => v === "" || /^\d{1,4}(\.\d{1,2})?$/.test(v),
-    "Enter centimetres, like 60 or 60.5",
+    (v) => v === "" || /^\d{1,3}(\.\d{1,2})?$/.test(v),
+    "Enter inches, like 36 or 2.5",
   );
 
 export const variantSchema = z
@@ -125,9 +127,10 @@ export function toVariantDbData(data: VariantFormValues) {
     price: data.price,
     salePrice: toDecimal(data.salePrice),
     stock: Number(data.stock),
-    widthCm: toDecimal(data.widthCm),
-    heightCm: toDecimal(data.heightCm),
-    depthCm: toDecimal(data.depthCm),
+        // The form holds inches. The database keeps centimetres.
+    widthCm: cmFromInches(data.widthCm),
+    heightCm: cmFromInches(data.heightCm),
+    depthCm: cmFromInches(data.depthCm),
     weightGrams: data.weightGrams === "" ? null : Number(data.weightGrams),
     isActive: data.isActive,
   };

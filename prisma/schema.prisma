@@ -528,6 +528,8 @@ model SiteSettings {
   localDeliveryRate  Decimal @default(0) @db.Decimal(14, 2)
     // Online ordering is opened and closed from the admin (Payments page)
   checkoutOpen Boolean @default(false)
+    // Delivery inside Rawalpindi costs this percentage of the normal courier rate
+  localDeliveryPercent Decimal @default(50) @db.Decimal(5, 2)
   updatedAt             DateTime @updatedAt
 }
 // ============================================================

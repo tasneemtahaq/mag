@@ -9,7 +9,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CM_PER_INCH, deliveryForItem, sizeShippingFrom } from "@/lib/checkout/delivery";
+import {
+  CM_PER_INCH,
+  deliveryForItem,
+  sizeShippingFrom,
+} from "@/lib/checkout/delivery";
 import { priceOrder } from "@/lib/checkout/pricing";
 import { PROVINCES } from "@/lib/checkout/provinces";
 import { getShippingAdmin } from "@/lib/data/admin-catalog";
@@ -27,7 +31,7 @@ const notices: Record<string, string> = {
 
 const problems: Record<string, string> = {
   "invalid-settings":
-    "Please check the numbers. Sizes are in inches (for example 36 or 2.5), and prices are in rupees (for example 1500). The free-delivery amount can be left blank.",
+    "Please check the numbers. Sizes are in inches (for example 36 or 2.5), prices are in rupees (for example 1500), and the Rawalpindi percentage is between 0 and 100. The free-delivery amount can be left blank.",
   "invalid-rule":
     "Please give the rule a name and enter its amounts in rupees, like 500. The order must be a whole number.",
 };
@@ -35,15 +39,20 @@ const problems: Record<string, string> = {
 const selectClass =
   "mt-2 flex h-10 w-full border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-// Common frame sizes (height × width, in inches) for the price table
+// Common frame sizes (height × width, in inches), small to large
 const EXAMPLE_SIZES: [number, number][] = [
+  [10, 8],
   [18, 12],
   [24, 18],
+  [30, 24],
   [36, 24],
   [40, 30],
   [48, 36],
-  [60, 48],
+  [60, 40],
+  [72, 48],
 ];
+
+const EXAMPLE_THICKNESSES = [1, 2, 3, 4, 5, 6];
 
 function NumberField({
   name,
@@ -176,10 +185,24 @@ export default async function AdminShippingPage({ searchParams }: Props) {
   const { notice, error, testProvince, testCity, testAmount } = query;
   const { settings, rules } = await getShippingAdmin();
   const sizeSettings = sizeShippingFrom(settings);
+  const percent = settings?.localDeliveryPercent ?? new Prisma.Decimal(50);
 
   const refHeight = sizeSettings.refHeightIn.toString();
   const refWidth = sizeSettings.refWidthIn.toString();
   const refThickness = sizeSettings.refThicknessIn.toString();
+
+  // The courier cost of one frame, and what Rawalpindi pays for it
+  const courier = (h: number, w: number, t: number) =>
+    deliveryForItem(
+      {
+        heightIn: new Prisma.Decimal(h),
+        widthIn: new Prisma.Decimal(w),
+        thicknessIn: new Prisma.Decimal(t),
+      },
+      sizeSettings,
+    );
+  const inRawalpindi = (cost: Prisma.Decimal) =>
+    cost.mul(percent).div(100).ceil();
 
   // "Check a delivery price" uses the very same function as checkout
   let test: { label: string; cost: number | null } | null = null;
@@ -214,11 +237,11 @@ export default async function AdminShippingPage({ searchParams }: Props) {
     };
   }
 
-  const ignoredGeneralRules = rules.filter(
-    (rule) => rule.isActive && !rule.city && !rule.province,
-  );
   const overridingRules = rules.filter(
     (rule) => rule.isActive && (rule.city || rule.province),
+  );
+  const unusedRules = rules.filter(
+    (rule) => rule.isActive && !rule.city && !rule.province,
   );
 
   return (
@@ -245,13 +268,14 @@ export default async function AdminShippingPage({ searchParams }: Props) {
 
       <section aria-labelledby="by-size" className="mt-12">
         <h2 id="by-size" className="font-display text-2xl font-light">
-          Delivery by frame size
+          Courier rates by frame size
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Describe one reference frame and what it costs to send anywhere in
-          Pakistan outside Rawalpindi. Every other size is priced in proportion
-          to its volume (height × width × thickness), rounded up to the next
-          Rs 50. Each artwork is sent as its own parcel.
+          Describe one reference frame and what the courier charges for it to
+          any city except Rawalpindi. Bigger and smaller frames are priced in
+          proportion to their volume (height × width × thickness) and rounded
+          up to the next Rs 50. Each artwork is sent as its own parcel.
+          Rawalpindi pays a percentage of that rate.
         </p>
         <form
           action={saveShippingSettings}
@@ -281,16 +305,16 @@ export default async function AdminShippingPage({ searchParams }: Props) {
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <NumberField
+              name="localDeliveryPercent"
+              label="Rawalpindi pays (% of the rate)"
+              defaultValue={percent.toString()}
+              hint="50 means half price. 100 means the same as everywhere else."
+            />
+            <NumberField
               name="shipMinPerItem"
               label="Minimum per artwork (PKR)"
               defaultValue={sizeSettings.minPerItem.toString()}
-              hint="The least charged for one artwork, however small."
-            />
-            <NumberField
-              name="localDeliveryRate"
-              label="Rawalpindi delivery (PKR)"
-              defaultValue={settings?.localDeliveryRate.toString() ?? "0"}
-              hint="Charged per order when the city is Rawalpindi. 0 means free."
+              hint="The least charged for one artwork, however small. Applies outside Rawalpindi."
             />
             <NumberField
               name="freeShippingThreshold"
@@ -304,9 +328,11 @@ export default async function AdminShippingPage({ searchParams }: Props) {
 
         <p className="mt-4 text-xs text-muted-foreground">
           Artwork sizes come from each variant (width, height and depth, in
-          centimetres). Depth is the frame&rsquo;s thickness. For your
-          reference frame, enter 91.44, 60.96 and 7.62. A variant with no size
-          is treated as the reference frame.
+          inches). Depth is the frame&rsquo;s thickness. For a 24 × 36 in frame
+          that is 3 in thick, enter width 24, height 36, depth 3. A variant
+          with no size is treated as the reference frame. A frame thinner than
+          the reference is charged as if it were as thick, because it still
+          needs protective packaging.
         </p>
       </section>
 
@@ -315,32 +341,63 @@ export default async function AdminShippingPage({ searchParams }: Props) {
           What customers pay per artwork
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Outside Rawalpindi, at the reference thickness of {refThickness} in.
+          At {refThickness} in thick. Calculated from the settings above.
         </p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-[0.15em] text-muted-foreground">
                 <th className="py-2 pr-6 font-medium">Height × width</th>
-                <th className="py-2 font-medium">Delivery</th>
+                <th className="py-2 pr-6 font-medium">Other cities</th>
+                <th className="py-2 font-medium">Rawalpindi</th>
               </tr>
             </thead>
             <tbody>
               {EXAMPLE_SIZES.map(([h, w]) => {
-                const cost = deliveryForItem(
-                  {
-                    heightIn: new Prisma.Decimal(h),
-                    widthIn: new Prisma.Decimal(w),
-                    thicknessIn: sizeSettings.refThicknessIn,
-                  },
-                  sizeSettings,
-                );
+                const cost = courier(h, w, Number(refThickness));
+                const isReference =
+                  h === Number(refHeight) && w === Number(refWidth);
                 return (
-                  <tr key={`${h}-${w}`} className="border-b border-border">
+                  <tr
+                    key={`${h}-${w}`}
+                    className={`border-b border-border ${isReference ? "font-medium" : ""}`}
+                  >
                     <td className="py-2 pr-6">
-                      {h} × {w} in
+                      {h} × {w} in{isReference ? " (reference)" : ""}
                     </td>
-                    <td className="py-2">{formatPrice(cost.toNumber())}</td>
+                    <td className="py-2 pr-6">{formatPrice(cost.toNumber())}</td>
+                    <td className="py-2">
+                      {formatPrice(inRawalpindi(cost).toNumber())}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="mt-8 text-sm font-medium">
+          Thickness, for a {refHeight} × {refWidth} in frame
+        </h3>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-border text-xs uppercase tracking-[0.15em] text-muted-foreground">
+                <th className="py-2 pr-6 font-medium">Thickness</th>
+                <th className="py-2 pr-6 font-medium">Other cities</th>
+                <th className="py-2 font-medium">Rawalpindi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {EXAMPLE_THICKNESSES.map((t) => {
+                const cost = courier(Number(refHeight), Number(refWidth), t);
+                return (
+                  <tr key={t} className="border-b border-border">
+                    <td className="py-2 pr-6">{t} in</td>
+                    <td className="py-2 pr-6">{formatPrice(cost.toNumber())}</td>
+                    <td className="py-2">
+                      {formatPrice(inRawalpindi(cost).toNumber())}
+                    </td>
                   </tr>
                 );
               })}
@@ -354,24 +411,27 @@ export default async function AdminShippingPage({ searchParams }: Props) {
           Special rules (optional)
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          A rule for a city or a province replaces the size pricing with a
+          A rule for a city or a province replaces the courier rates with a
           fixed cost for orders to that place. A city rule wins over a province
-          rule. Leave this empty if size pricing should apply everywhere.
+          rule. <strong>Leave this empty if the courier rates should apply
+          everywhere</strong>, and delete any rules you were only testing with.
         </p>
 
         {overridingRules.length > 0 && (
-          <p className="mt-4 border border-border bg-muted px-4 py-3 text-sm">
+          <p
+            role="alert"
+            className="mt-4 border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+          >
             {overridingRules.length === 1
-              ? "1 rule is switched on, so it replaces size pricing for its place."
-              : `${overridingRules.length} rules are switched on, so they replace size pricing for their places.`}{" "}
-            Delete the ones you were only testing with.
+              ? "1 special rule is switched on, so it replaces the courier rates for its place."
+              : `${overridingRules.length} special rules are switched on, so they replace the courier rates for their places.`}{" "}
+            If your delivery prices look too low, check these first.
           </p>
         )}
-        {ignoredGeneralRules.length > 0 && (
+        {unusedRules.length > 0 && (
           <p className="mt-4 border border-border bg-muted px-4 py-3 text-sm">
-            {ignoredGeneralRules.length} rule
-            {ignoredGeneralRules.length === 1 ? " has" : "s have"} no province
-            and no city. These are no longer used, so you can delete them.
+            {unusedRules.length} rule{unusedRules.length === 1 ? " has" : "s have"}{" "}
+            no province and no city. These are not used, so you can delete them.
           </p>
         )}
 
@@ -413,7 +473,7 @@ export default async function AdminShippingPage({ searchParams }: Props) {
           ))}
           {rules.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              No special rules. Every order uses size pricing.
+              No special rules. Every order uses the courier rates.
             </p>
           )}
 
@@ -433,8 +493,8 @@ export default async function AdminShippingPage({ searchParams }: Props) {
           Check a delivery price
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Try one artwork&rsquo;s size and an address. This uses exactly what
-          checkout uses.
+          Try one artwork&rsquo;s size (in inches) and an address. This uses
+          exactly what checkout uses.
         </p>
         <form
           action="/admin/shipping"
